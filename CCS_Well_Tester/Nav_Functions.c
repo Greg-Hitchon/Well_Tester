@@ -64,14 +64,14 @@ const unsigned int cad_Distance_Per_90[2] = {16250, 16250};
 
 //structs
 struct Motor_State {
-	unsigned long Step_Target, Step_Count, Tick_Total, Num_Leftover, Num_Overflows;
-    unsigned int Bit_States, Div_State, ACC_Interval, Overflows_Remaining, Profile_ID;
+	unsigned long Step_Target, Step_Count, Tick_Total;
+    unsigned int Bit_States, Div_State, ACC_Counter, Overflows_Remaining, Profile_ID, Num_Leftover, Num_Overflows;
 	bool Is_Running, Is_A, Is_Forwards;
 };
 
 struct Nav_Profile{
-	unsigned long Steps_Per_ACC, Steps_Per_DEC, Ticks_Per_ACC_Jump, Ticks_Per_DEC_Jump, Total_Ticks;
-	unsigned int Num_Overflows, Num_Leftover, Steps_Per_ACC_Jump, Steps_Per_DEC_Jump;
+	unsigned long Steps_Per_ACC, Steps_Per_DEC, Ticks_Per_ACC_Jump, Ticks_Per_DEC_Jump, Total_Ticks, Middle_Ticks, End_Ticks;
+	unsigned int Num_Overflows, Num_Leftover;
 	bool Has_ACC, Has_DEC;
 };
 
@@ -107,6 +107,12 @@ void Create_Nav_Profile(unsigned int Profile_ID,
 		//get starting ticks
 		s_Nav_Profiles[Profile_ID].Total_Ticks = Get_Ticks(Start_Speed);
 
+		//need to get the middle speed in ticks so as to know when to terminate the acceleration
+		s_Nav_Profiles[Profile_ID].Middle_Ticks = Get_Ticks(Middle_Speed);
+
+		//need to get the end speed in ticks so as to know when to terminate the deceleration
+		s_Nav_Profiles[Profile_ID].End_Ticks = Get_Ticks(End_Speed);
+
 		//get starting overflows
 		s_Nav_Profiles[Profile_ID].Num_Overflows = ((unsigned int) ((s_Nav_Profiles[Profile_ID].Total_Ticks)/0x10000UL));
 
@@ -123,10 +129,8 @@ void Create_Nav_Profile(unsigned int Profile_ID,
 			s_Nav_Profiles[Profile_ID].Steps_Per_ACC = (unsigned long) (Turns_Per_ACC*STEPS_PER_ROT);
 
 			//get ticks/jump acc
-			s_Nav_Profiles[Profile_ID].Ticks_Per_ACC_Jump = ((s_Nav_Profiles[Profile_ID].Total_Ticks - Get_Ticks(Middle_Speed))*(Steps_Per_ACC_Jump))/s_Nav_Profiles[Profile_ID].Steps_Per_ACC;
+			s_Nav_Profiles[Profile_ID].Ticks_Per_ACC_Jump = ((s_Nav_Profiles[Profile_ID].Total_Ticks - s_Nav_Profiles[Profile_ID].Middle_Ticks)*(Steps_Per_ACC_Jump))/s_Nav_Profiles[Profile_ID].Steps_Per_ACC;
 
-			//number of steps/adjust is needed in interrupt to let know how often to update period
-			s_Nav_Profiles[Profile_ID].Steps_Per_ACC_Jump = Steps_Per_ACC_Jump;
 		}
 		else{
 			s_Nav_Profiles[Profile_ID].Has_ACC = false;
@@ -141,10 +145,7 @@ void Create_Nav_Profile(unsigned int Profile_ID,
 			s_Nav_Profiles[Profile_ID].Steps_Per_DEC = (unsigned long) (Turns_Per_DEC*STEPS_PER_ROT);
 
 			//get ticks/jump DEC
-			s_Nav_Profiles[Profile_ID].Ticks_Per_DEC_Jump = ((Get_Ticks(End_Speed) - Get_Ticks(Middle_Speed))*(Steps_Per_DEC_Jump))/s_Nav_Profiles[Profile_ID].Steps_Per_DEC;
-
-			//number of steps/adjust is needed in interrupt to let know how often to update period
-			s_Nav_Profiles[Profile_ID].Steps_Per_DEC_Jump = Steps_Per_DEC_Jump;
+			s_Nav_Profiles[Profile_ID].Ticks_Per_DEC_Jump = ((s_Nav_Profiles[Profile_ID].End_Ticks - s_Nav_Profiles[Profile_ID].Middle_Ticks)*(Steps_Per_DEC_Jump))/s_Nav_Profiles[Profile_ID].Steps_Per_DEC;
 		}
 		else{
 			s_Nav_Profiles[Profile_ID].Has_DEC = false;
@@ -298,53 +299,31 @@ void Motor_Toggle(	unsigned int Motor_ID,
 
 			//if acceleration is enabled then this will decrease the period at specified frequency and amount
 			if(s_Nav_Profiles[Profile_ID].Has_ACC){
-				//check for acceleration update here
-				if ((s_Cur_Motor_State[INDEX].Step_Count <= s_Nav_Profiles[Profile_ID].Steps_Per_ACC) &&
-						(s_Cur_Motor_State[INDEX].Step_Count <= (s_Cur_Motor_State[INDEX].Step_Target/2))){
-					//check for acceleration, div_State is used to only trigger this check 1/4 interrupts or 1 motor step
-					if (++s_Cur_Motor_State[INDEX].Div_State == 4){
-						//check if needs an update
-						if (++s_Cur_Motor_State[INDEX].ACC_Interval == s_Nav_Profiles[Profile_ID].Steps_Per_ACC_Jump){
-							//adjust the period between ticks (add TA0R so we dont have to reset it)
-							s_Cur_Motor_State[INDEX].Tick_Total -= (s_Cur_Motor_State[INDEX].Tick_Total)/100;        //s_Nav_Profiles[Profile_ID].Ticks_Per_ACC_Jump;
+				//check for acceleration, div_State is used to only trigger this check 1/4 interrupts or 1 motor step
+				if (++s_Cur_Motor_State[INDEX].Div_State == 4){
+					//check for acceleration update here
+					if ((s_Cur_Motor_State[INDEX].Tick_Total > s_Nav_Profiles[Profile_ID].Middle_Ticks) &&
+							(s_Cur_Motor_State[INDEX].Step_Count <= (s_Cur_Motor_State[INDEX].Step_Target/2))){
+						//adjust the period between ticks (add TA0R so we dont have to reset it)
+						//s_Cur_Motor_State[INDEX].Tick_Total -= (s_Cur_Motor_State[INDEX].Tick_Total)/100;        //s_Nav_Profiles[Profile_ID].Ticks_Per_ACC_Jump;
+						s_Cur_Motor_State[INDEX].ACC_Counter++;
+						s_Cur_Motor_State[INDEX].Tick_Total = (s_Cur_Motor_State[INDEX].Tick_Total)-(2*s_Cur_Motor_State[INDEX].Tick_Total)/(2*(4*s_Cur_Motor_State[INDEX].ACC_Counter + 1));
 
-							//adjust the overflow total and leftover
-							s_Cur_Motor_State[INDEX].Num_Overflows = (s_Cur_Motor_State[INDEX].Tick_Total/0x10000UL);
-							s_Cur_Motor_State[INDEX].Num_Leftover = (s_Cur_Motor_State[INDEX].Tick_Total % 0xFFFFUL);
-
-							//reset state
-							s_Cur_Motor_State[INDEX].ACC_Interval = 0;
+						//check for overshoot
+						if (s_Cur_Motor_State[INDEX].Tick_Total < s_Nav_Profiles[Profile_ID].Middle_Ticks){
+							s_Cur_Motor_State[INDEX].Tick_Total = s_Nav_Profiles[Profile_ID].Middle_Ticks;
 						}
-						//reset state
-						s_Cur_Motor_State[INDEX].Div_State = 0;
+
+						//adjust the overflow total and leftover
+						s_Cur_Motor_State[INDEX].Num_Overflows = (s_Cur_Motor_State[INDEX].Tick_Total/0x10000UL);
+						s_Cur_Motor_State[INDEX].Num_Leftover = (s_Cur_Motor_State[INDEX].Tick_Total % 0xFFFFUL);
 					}
+
+					//reset state
+					s_Cur_Motor_State[INDEX].Div_State = 0;
 				}
 			}
 
-			//if deceleration is enabled then this will decrease the period at specified frequency and amount
-			if(s_Nav_Profiles[Profile_ID].Has_DEC){
-				//check for deceleration update here
-				if (((s_Cur_Motor_State[INDEX].Step_Target - s_Cur_Motor_State[INDEX].Step_Count) <= s_Nav_Profiles[Profile_ID].Steps_Per_DEC) &&
-						(s_Cur_Motor_State[INDEX].Step_Count > (s_Cur_Motor_State[INDEX].Step_Target/2))){
-					//check for acceleration, div_State is used to only trigger this check 1/4 interrupts or 1 motor step
-					if (++s_Cur_Motor_State[INDEX].Div_State == 4){
-						//check if needs an update
-						if (++s_Cur_Motor_State[INDEX].ACC_Interval == s_Nav_Profiles[Profile_ID].Steps_Per_DEC_Jump){
-							//adjust the period between ticks (add TA0R so we dont have to reset it)
-							s_Cur_Motor_State[INDEX].Tick_Total += (s_Cur_Motor_State[INDEX].Tick_Total)/100;//s_Nav_Profiles[Profile_ID].Ticks_Per_DEC_Jump;
-
-							//adjust the overflow total and leftover
-							s_Cur_Motor_State[INDEX].Num_Overflows = (s_Cur_Motor_State[INDEX].Tick_Total/0x10000UL);
-							s_Cur_Motor_State[INDEX].Num_Leftover = (s_Cur_Motor_State[INDEX].Tick_Total % 0xFFFFUL);
-
-							//reset state
-							s_Cur_Motor_State[INDEX].ACC_Interval = 0;
-						}
-						//reset state
-						s_Cur_Motor_State[INDEX].Div_State = 0;
-					}
-				}
-			}
 
 
 			//reset the overflow count

@@ -64,7 +64,7 @@ void main(void) {
   }
   */
   
-  /*
+  ///*
   //test for frequency values here
   int i = 0;
   for(;;){
@@ -79,7 +79,7 @@ void main(void) {
    __delay_cycles(5000000);
  //_BIS_SR(LPM4_bits + GIE);
   }
-  */
+  //*/
   
  /*
   //test for ADC values here
