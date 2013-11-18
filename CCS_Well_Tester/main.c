@@ -64,7 +64,7 @@ void main(void) {
   }
   */
   
-  ///*
+  /*
   //test for frequency values here
   int i = 0;
   for(;;){
@@ -79,7 +79,7 @@ void main(void) {
    __delay_cycles(5000000);
  //_BIS_SR(LPM4_bits + GIE);
   }
-  //*/
+  */
   
  /*
   //test for ADC values here
@@ -120,8 +120,9 @@ void main(void) {
   //set motors to output
   
   //create acceleration profile
-  Create_Nav_Profile(0U,10,100,10,2,2,1,1);
-  Create_Nav_Profile(1U,100,100,100,1,2,1,1);
+  Create_Nav_Profile(0,50,true,true);
+  Create_Nav_Profile(1,100,false,true);
+  //Create_Nav_Profile(1U,100,100,100,50,50);
   for(;;){
     /*
     Set_Motor_Outputs();
@@ -136,7 +137,7 @@ void main(void) {
     */
     Set_Motor_Outputs();
     Set_Timer();
-    Straight(BACKWARD,20000UL, 0U);
+    Straight(BACKWARD,5000UL, 0);
     __delay_cycles(5000000);
   }
 

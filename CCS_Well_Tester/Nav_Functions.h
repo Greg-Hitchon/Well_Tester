@@ -19,12 +19,8 @@ void Start_Motor(unsigned int Motor_ID);
 void Straight(unsigned int, unsigned long, unsigned int);
 void Turn(unsigned int, unsigned int);
 void Create_Nav_Profile(unsigned int Profile_ID,
-						unsigned int Start_Speed,
-						unsigned int Middle_Speed,
-						unsigned int End_Speed,
-						unsigned int Turns_Per_ACC,
-						unsigned int Turns_Per_DEC,
-						unsigned int Steps_Per_ACC_Jump,
-						unsigned int Steps_Per_DEC_Jump);
+						unsigned int Target_Speed,
+						bool Do_Acc,
+						bool Do_Dec);
 
 #endif /* NAV_FUNCTIONS_H_ */
