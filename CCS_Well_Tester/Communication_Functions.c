@@ -24,7 +24,7 @@ void Setup_Comms(void)
   
   UCA0CTL1 |= UCSSEL_2;                                 // CLK = SMCLK
   UCA0BR0 = UART_DIVISOR;                               // last 8 bits of 1666
-  UCA0BR1 = UART_DIVISOR >> 8;                                    //first 8 bits of 
+  UCA0BR1 = UART_DIVISOR >> 8;                          //first 8 bits of
   UCA0MCTL =  UCBRS_6;                                   // Modulation UCBRSx = 6
   UCA0CTL1 &= ~UCSWRST;                                 // **Initialize USCI state machine**
 }

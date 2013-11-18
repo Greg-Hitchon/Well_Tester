@@ -24,11 +24,10 @@
  *can be used with ADC (multiple LED inputs for instance) and 4 for frequency (converting physical property to oscillator)
  *
  *TO DO LIST:
- *-Could switch implementation of the motor outputs with TIMERA in upmode, this would make sure there is no issue with missing increments
- *-Experiment with using capture mode on frequency countner see if a wider range of freq measurement is possible.
+ *-update the save/restore feature to include acceleration/deceleration
  *
  *THINGS DEPENDENT ON CLOCK FREQUENCY:
- *-Communication function is hardcoded (baud rate divider) as well as modulation bits
+ *-certain calculations may need to be adjusted (due to integer division/range issues) if clock freq is increased
  *
  */
 #define NUM_TEST 15
@@ -120,7 +119,7 @@ void main(void) {
   //set motors to output
   
   //create acceleration profile
-  Create_Nav_Profile(0,50,true,true);
+  Create_Nav_Profile(0,20,true,false);
   Create_Nav_Profile(1,100,false,true);
   //Create_Nav_Profile(1U,100,100,100,50,50);
   for(;;){
@@ -137,7 +136,7 @@ void main(void) {
     */
     Set_Motor_Outputs();
     Set_Timer();
-    Straight(BACKWARD,5000UL, 0);
+    Straight(BACKWARD,50000UL, 0);
     __delay_cycles(5000000);
   }
 
