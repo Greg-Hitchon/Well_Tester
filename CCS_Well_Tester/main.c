@@ -119,8 +119,8 @@ void main(void) {
   //set motors to output
   
   //create acceleration profile
-  Create_Nav_Profile(0,30,true,true);
-  Create_Nav_Profile(1,100,false,true);
+  Create_Nav_Profile(0,20,true,true);
+  Create_Nav_Profile(1,40,true,true);
   //Create_Nav_Profile(1U,100,100,100,50,50);
   for(;;){
     /*
@@ -136,7 +136,7 @@ void main(void) {
     */
     Set_Motor_Outputs();
     Set_Timer();
-    Straight(FORWARD,5000UL, 0);
+    Straight(FORWARD,10000UL,5000UL,0,1);
     __delay_cycles(5000000);
   }
 

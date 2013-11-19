@@ -27,8 +27,10 @@ void Clear_State(unsigned int);
 void Save_State(unsigned int);
 void Set_Motor(	unsigned int Motor_ID,
 				unsigned int Direction,
-				unsigned long Distance,
-				unsigned int Profile_ID);
+				unsigned long Left_Distance,
+				unsigned long Right_Distance,
+				unsigned int Left_Profile_ID,
+				unsigned int Right_Profile_ID);
 void Start_Motor(unsigned int Motor_ID);
 void Hold_Until_Finished(void);
 
@@ -140,43 +142,69 @@ void Set_Motor_Outputs(void){
   P2OUT &= ~BIT_ALL_MOTORS;
 }
 
+
+//this function sets up the struct used to define running parameters
+//could use a better structure here, (put vals in array then loop through) but this is simpler if larger code and harder to maintain
 void Set_Motor(	unsigned int Motor_ID,
 				unsigned int Direction,
-				unsigned long Distance,
-				unsigned int Profile_ID){
+				unsigned long Left_Distance,
+				unsigned long Right_Distance,
+				unsigned int Left_Profile_ID,
+				unsigned int Right_Profile_ID){
+
 	unsigned int i;
-	//unsigned long ul_Steps_ACC, ul_Steps_DEC;
 
 	//reset states here as we are not explicitly filling the entire struct
 	Clear_State(Motor_ID);
-        
-	//here we initialize the number of overflows necessary
-	for (i = 0; i<2; i++){
-	  s_Cur_Motor_State[i].Overflows_Remaining = s_Nav_Profiles[Profile_ID].Num_Overflows;
-	  s_Cur_Motor_State[i].Num_Overflows = s_Nav_Profiles[Profile_ID].Num_Overflows;
-	  s_Cur_Motor_State[i].Num_Leftover = s_Nav_Profiles[Profile_ID].Num_Leftover;
-	  s_Cur_Motor_State[i].Tick_Total = s_Nav_Profiles[Profile_ID].Start_Ticks;
-	  s_Cur_Motor_State[i].Step_Target = ((unsigned long) Distance/DISTANCE_PER_STEP);
-	  s_Cur_Motor_State[i].Step_Target_By_2 = s_Cur_Motor_State[i].Step_Target/2;
-	  s_Cur_Motor_State[i].Is_Running = true;
-	  s_Cur_Motor_State[i].Profile_ID = Profile_ID;
-	}
 
-        //set left motor
+	//set left motor
 	if (Motor_ID & LEFT_MOTOR){
+		//the "is_forwards" flag is not really necessary but makes code more readable/easy to debug
 		s_Cur_Motor_State[LEFT].Is_Forwards = ((Direction & LEFT_BACKWARD)==0);
-		//adjust for backwards bit here
+
+		//adjust for backwards bit here (by switching this bit we control motor direction
 		if (s_Cur_Motor_State[LEFT].Is_Forwards == false){
 		   s_Cur_Motor_State[LEFT].Bit_States = BIT_MLB;
 		}
+
+		//bring in info from the nav profile here, this initializes the dynamic counters in the motor struct
+		s_Cur_Motor_State[LEFT].Overflows_Remaining = s_Nav_Profiles[Left_Profile_ID].Num_Overflows;
+		s_Cur_Motor_State[LEFT].Num_Overflows = s_Nav_Profiles[Left_Profile_ID].Num_Overflows;
+		s_Cur_Motor_State[LEFT].Num_Leftover = s_Nav_Profiles[Left_Profile_ID].Num_Leftover;
+		s_Cur_Motor_State[LEFT].Tick_Total = s_Nav_Profiles[Left_Profile_ID].Start_Ticks;
+
+		//get target here
+		s_Cur_Motor_State[LEFT].Step_Target = ((unsigned long) Left_Distance/DISTANCE_PER_STEP);
+		s_Cur_Motor_State[LEFT].Step_Target_By_2 = s_Cur_Motor_State[LEFT].Step_Target/2;
+
+		//initialize running state and set the profile id which determines accel and speed characteristics
+		s_Cur_Motor_State[LEFT].Is_Running = true;
+		s_Cur_Motor_State[LEFT].Profile_ID = Left_Profile_ID;
+
 	}
 	//set right motor
 	if (Motor_ID & RIGHT_MOTOR){
+		//the "is_forwards" flag is not really necessary but makes code more readable/easy to debug
 		s_Cur_Motor_State[RIGHT].Is_Forwards = ((Direction & RIGHT_BACKWARD)==0);
-		//adjust for backwards bit here
-		 if (s_Cur_Motor_State[RIGHT].Is_Forwards == false){
+
+		//adjust for backwards bit here (by switching this bit we control motor direction
+		if (s_Cur_Motor_State[RIGHT].Is_Forwards == false){
 		   s_Cur_Motor_State[RIGHT].Bit_States = BIT_MRB;
 		}
+
+		//bring in info from the nav profile here, this initializes the dynamic counters in the motor struct
+		s_Cur_Motor_State[RIGHT].Overflows_Remaining = s_Nav_Profiles[Right_Profile_ID].Num_Overflows;
+		s_Cur_Motor_State[RIGHT].Num_Overflows = s_Nav_Profiles[Right_Profile_ID].Num_Overflows;
+		s_Cur_Motor_State[RIGHT].Num_Leftover = s_Nav_Profiles[Right_Profile_ID].Num_Leftover;
+		s_Cur_Motor_State[RIGHT].Tick_Total = s_Nav_Profiles[Right_Profile_ID].Start_Ticks;
+
+		//get target here
+		s_Cur_Motor_State[RIGHT].Step_Target = ((unsigned long) Right_Distance/DISTANCE_PER_STEP);
+		s_Cur_Motor_State[RIGHT].Step_Target_By_2 = s_Cur_Motor_State[RIGHT].Step_Target/2;
+
+		//initialize running state and set the profile id which determines accel and speed characteristics
+		s_Cur_Motor_State[RIGHT].Is_Running = true;
+		s_Cur_Motor_State[RIGHT].Profile_ID = Right_Profile_ID;
 	}
 }
 
@@ -268,27 +296,33 @@ void Hold_Until_Finished(void){
 //**********************************************************************************************************||
 //**********************************************************************************************************||
 
-void Turn(unsigned int Direction, unsigned int Profile_ID){
+void Turn(	unsigned int Direction,
+			unsigned int Left_Profile_ID,
+			unsigned int Right_Profile_ID){
   if(Direction == LEFT){
-      Set_Motor(BOTH_MOTORS,TURN_LEFT,cad_Distance_Per_90[LEFT],Profile_ID);
+      Set_Motor(BOTH_MOTORS,TURN_LEFT,cad_Distance_Per_90[LEFT], cad_Distance_Per_90[LEFT], Left_Profile_ID, Right_Profile_ID);
       Start_Motor(BOTH_MOTORS);
       Hold_Until_Finished();
   }
   else{
-      Set_Motor(BOTH_MOTORS,TURN_RIGHT,cad_Distance_Per_90[RIGHT],Profile_ID);
+	  Set_Motor(BOTH_MOTORS,TURN_RIGHT,cad_Distance_Per_90[RIGHT], cad_Distance_Per_90[RIGHT], Left_Profile_ID, Right_Profile_ID);
       Start_Motor(BOTH_MOTORS);
       Hold_Until_Finished();
   }
 }
 
-void Straight(unsigned int Direction, unsigned long Distance, unsigned int Profile_ID){
+void Straight(	unsigned int Direction,
+				unsigned long Left_Distance,
+				unsigned long Right_Distance,
+				unsigned int Left_Profile_ID,
+				unsigned int Right_Profile_ID){
   if (Direction == FORWARD){
-    Set_Motor(BOTH_MOTORS,BOTH_FORWARD,Distance, Profile_ID);
+    Set_Motor(BOTH_MOTORS,BOTH_FORWARD,Left_Distance, Right_Distance, Left_Profile_ID, Right_Profile_ID);
     Start_Motor(BOTH_MOTORS);
     Hold_Until_Finished();
   }
   else{
-    Set_Motor(BOTH_MOTORS,BOTH_BACKWARD,Distance, Profile_ID);
+	  Set_Motor(BOTH_MOTORS,BOTH_BACKWARD,Left_Distance, Right_Distance, Left_Profile_ID, Right_Profile_ID);
     Start_Motor(BOTH_MOTORS);
     Hold_Until_Finished();
   }
