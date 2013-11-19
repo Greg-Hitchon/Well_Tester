@@ -72,7 +72,7 @@ void main(void) {
     //}
    __delay_cycles(100000);
    //FREQ_VAL[i++] = Frequency_Read(BIT0, 1000);   
-   Print_UINT(Frequency_Read(BIT0, 1000));
+   Print_ULONG(Frequency_Read(BIT0,100000000,20000000,true));
    __delay_cycles(5000000);
    Print_String("\r\n");
    __delay_cycles(5000000);
@@ -119,7 +119,7 @@ void main(void) {
   //set motors to output
   
   //create acceleration profile
-  Create_Nav_Profile(0,20,true,false);
+  Create_Nav_Profile(0,30,true,true);
   Create_Nav_Profile(1,100,false,true);
   //Create_Nav_Profile(1U,100,100,100,50,50);
   for(;;){
@@ -136,7 +136,7 @@ void main(void) {
     */
     Set_Motor_Outputs();
     Set_Timer();
-    Straight(BACKWARD,50000UL, 0);
+    Straight(FORWARD,5000UL, 0);
     __delay_cycles(5000000);
   }
 

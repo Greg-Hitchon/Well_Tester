@@ -19,7 +19,6 @@
 #include "cstbool.h"
 
 //macro definitions
-#define MAX_SAMPLE_COUNT (10000000UL)
 #define TICK_FREQUENCY (CLOCK_FREQ/8)
 #define TICK_RESOLUTION 50
 #define CAP_DELAY 100
@@ -29,8 +28,8 @@ unsigned int cstlog2(unsigned int);
 void Discharge_Cap(unsigned int);
 
 //global variables
-unsigned long gul_Tick_Count, gul_ADC_Total;
-unsigned int gui_Freq_Count, gui_Freq_Target, gui_Channel, gui_ADC_Count, gui_ADC_Target;
+unsigned long gul_Tick_Count, gul_ADC_Total, gul_Freq_Target, gul_Freq_Count, gul_Max_Ticks;
+unsigned int gui_Channel, gui_ADC_Count, gui_ADC_Target;
    
 //Analog_Read performs much like the "Arduino" version with a 10-bit digital 
 //value being returned that is scaled to 0-2.5V on a given port
@@ -85,14 +84,17 @@ return (unsigned int) (gul_ADC_Total/gui_ADC_Count);
 
 //this function uses timera channel 0 to measure the frequency of 
 unsigned long Frequency_Read(unsigned int Channel, 
-                            unsigned int Target_Count){  
+                            unsigned long Max_Input_Count,
+                            unsigned long Max_Clock_Count,
+                            bool Return_Total){
   //disable all interrupts
   __disable_interrupt();
   
   //clear global vars
   gul_Tick_Count = 0;
-  gui_Freq_Count = 0;
-  gui_Freq_Target = Target_Count;
+  gul_Freq_Count = 0;
+  gul_Max_Ticks = Max_Clock_Count;
+  gul_Freq_Target = Max_Input_Count;
   gui_Channel = Channel;
 
   
@@ -117,8 +119,14 @@ unsigned long Frequency_Read(unsigned int Channel,
    
   //trap div0 error
   if(gul_Tick_Count > 0){
-    //returns a simple ratio of the counted frequency/counted clock ticks scaled to the clock frequency
-    return (1000UL*gui_Freq_Count*TICK_FREQUENCY)/gul_Tick_Count;
+    if (Return_Total){
+    	//return the total frequency count
+    	return gul_Freq_Count;
+    }
+    else{
+    	//returns a simple ratio of the counted frequency/counted clock ticks scaled to the clock frequency
+    	return (1000UL*gul_Freq_Count*TICK_FREQUENCY)/gul_Tick_Count;
+    }
   }
   else{
     return 0;
@@ -174,7 +182,7 @@ __interrupt void ADC_ISR(void){
 
 #pragma vector=TIMER1_A0_VECTOR
 __interrupt void TIMER1_CCR0_ISR(void){
-    if (gul_Tick_Count < MAX_SAMPLE_COUNT){
+    if (gul_Tick_Count < gul_Max_Ticks){
       //increment tick count by 10 to increase performacne (slightly lower resolution
       gul_Tick_Count += (TICK_RESOLUTION + 1);
     }
@@ -196,12 +204,26 @@ __interrupt void TIMER1_OTHER_ISR(void){
 __interrupt void PORT2_ISR(void){
   
  //start oscillation
-  Discharge_Cap(gui_Channel);
+
+	//copied start (inlining)
+	//setup oscillator
+	//clear cap
+	  P2DIR = gui_Channel;
+	  P2OUT = 0x0;
+
+	  //allow discharge
+	  __delay_cycles(CAP_DELAY);
+
+	  //start oscillation
+	  P2DIR &= ~gui_Channel;
+	  //copied end (inlining
+
+	//Discharge_Cap(gui_Channel);
    
    //counter
-    if (gui_Freq_Count < gui_Freq_Target){
+    if (gul_Freq_Count < gul_Freq_Target){
         //increment the frequency counter each timer interrupt is requested
-        gui_Freq_Count++;
+        gul_Freq_Count++;
       }
       else {
         //disable interrupts and set flag

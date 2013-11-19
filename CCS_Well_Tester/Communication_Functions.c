@@ -9,6 +9,7 @@
 void Print_String(char *);
 unsigned int strlen(const char *);
 char * UINT_TO_STRING(unsigned int i);
+char * ULONG_TO_STRING(unsigned long i);
 
 
 char *Output_String;
@@ -35,6 +36,13 @@ void Print_UINT(unsigned int Value){
   //c_Tst1 = UINT_TO_STRING(Value);
   //convert and use print string
   Print_String(UINT_TO_STRING(Value));
+}
+
+void Print_ULONG(unsigned long Value){
+
+  //c_Tst1 = UINT_TO_STRING(Value);
+  //convert and use print string
+  Print_String(ULONG_TO_STRING(Value));
 }
 
 void Print_String(char *Output){
@@ -71,6 +79,18 @@ char * UINT_TO_STRING(unsigned int i)
     *--bp = i%10+'0';
   }while (i /= 10);
   
+  return bp;
+}
+
+char * ULONG_TO_STRING(unsigned long i)
+{
+  static char buf[21];
+  char* bp = buf+sizeof(buf);
+  *--bp = '\0';
+  do{
+    *--bp = i%10+'0';
+  }while (i /= 10);
+
   return bp;
 }
 

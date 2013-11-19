@@ -38,18 +38,19 @@ void Hold_Until_Finished(void);
 #define STEPS_PER_ROT           (203UL)
 #define MIN_RPM                 (10UL)
 #define MAX_RPM                 (100UL)
-#define NUM_NAV_PROFILES		(3)
+#define NUM_NAV_PROFILES		(2)
 
 //this constant is used to calculate the initial period in the acceleration profile (Note we are assuming acceleration from 0 and deceleration to 0)
 //for a linear ramp this constant can be found usingn the expression (empirically derived): C= 1/(0.6156*N^(-0.476)) where N is the number of steps before the target period is reached
 //it is clear why this is not the best to calculate dynamically, a few values are; N=100->C=15, N=203->C=19, N=400->C=28, N=2000->C=60
-#define SCALING_CONSTANT		(19)
-#define ACC_STEPS				(203)
+#define SCALING_CONSTANT		(28)
+#define ACC_STEPS				(2000)
 #define DEC_STEPS				(203)
-#define MAX_PERIOD				((unsigned long) (((150000UL*CLOCK_FREQ)/((MIN_RPM + (MAX_RPM-MIN_RPM)*(10UL)*STEPS_PER_ROT))*10UL)))
+#define START_SPEED				(20UL)
 
 //secondary (calculated) values
 #define DISTANCE_PER_STEP               ((unsigned  int) (DIST_PER_ROT/STEPS_PER_ROT))
+#define MAX_PERIOD				((unsigned long) (((150000UL*CLOCK_FREQ)/((MIN_RPM + (MAX_RPM-MIN_RPM)*(START_SPEED)*STEPS_PER_ROT))*10UL)))
 
 //**********************************************************************************************************||
 //constants (calibration and system parameters)
@@ -97,7 +98,7 @@ void Create_Nav_Profile(unsigned int Profile_ID,
 
 		if (Do_Acc){
 			//scale the ticks value if acceleration is set
-			s_Nav_Profiles[Profile_ID].Start_Ticks *= SCALING_CONSTANT;
+			s_Nav_Profiles[Profile_ID].Start_Ticks = s_Nav_Profiles[Profile_ID].Middle_Ticks*SCALING_CONSTANT;
 
 			//check if this is greater than the max period
 			if (s_Nav_Profiles[Profile_ID].Start_Ticks > MAX_PERIOD){
@@ -252,14 +253,98 @@ void Start_Motor(unsigned int Motor_ID){
   }
 }
 
-void Motor_Toggle(	unsigned int Motor_ID,
-					unsigned int volatile *Counter,
-					bool *Exit_LPM){
 
-	unsigned int INDEX, Profile_ID;
+void Hold_Until_Finished(void){
+  __bis_SR_register(CPUOFF + GIE); 
+  //while((s_Cur_Motor_State[LEFT].Is_Running == true) || (s_Cur_Motor_State[RIGHT].Is_Running == true)){
+  //}
+}
 
+//**********************************************************************************************************||
+//composite functions
+//**********************************************************************************************************||
+//these functions just package the basic functions into easier to use forms with common constants supplied
+//for typical behaviour (turn (left/right), straight (backwards/forwards)
+//**********************************************************************************************************||
+//**********************************************************************************************************||
+
+void Turn(unsigned int Direction, unsigned int Profile_ID){
+  if(Direction == LEFT){
+      Set_Motor(BOTH_MOTORS,TURN_LEFT,cad_Distance_Per_90[LEFT],Profile_ID);
+      Start_Motor(BOTH_MOTORS);
+      Hold_Until_Finished();
+  }
+  else{
+      Set_Motor(BOTH_MOTORS,TURN_RIGHT,cad_Distance_Per_90[RIGHT],Profile_ID);
+      Start_Motor(BOTH_MOTORS);
+      Hold_Until_Finished();
+  }
+}
+
+void Straight(unsigned int Direction, unsigned long Distance, unsigned int Profile_ID){
+  if (Direction == FORWARD){
+    Set_Motor(BOTH_MOTORS,BOTH_FORWARD,Distance, Profile_ID);
+    Start_Motor(BOTH_MOTORS);
+    Hold_Until_Finished();
+  }
+  else{
+    Set_Motor(BOTH_MOTORS,BOTH_BACKWARD,Distance, Profile_ID);
+    Start_Motor(BOTH_MOTORS);
+    Hold_Until_Finished();
+  }
+}
+
+//**********************************************************************************************************||
+//Interrupts
+//**********************************************************************************************************||
+//this is where the 4 pulse width signals are output.  Each has the same period (so same speed) and each motor has two pulses (A and B)
+//This means that there needs to be a Period/4 frequency of interrupts.
+//**********************************************************************************************************||
+//**********************************************************************************************************||
+
+//#pragma vector=TIMER0_A0_VECTOR
+//__interrupt void TIMER0_CCRO_ISR(void){
+//}
+
+//clear flag here, also updates the
+#pragma vector=TIMER0_A1_VECTOR
+__interrupt void TIMER0_OTHER_ISR(void){
+  unsigned int i, Motor_ID, INDEX, Profile_ID;
+  bool Do_Toggle = false;
+  unsigned int volatile *Counter;
+
+  switch(__even_in_range(TA0IV,0xA)){
+    case TA0IV_TAIFG:
+    	//decrement overflows if needed from left motor
+        if (s_Cur_Motor_State[LEFT].Overflows_Remaining > 0){
+          s_Cur_Motor_State[LEFT].Overflows_Remaining--;
+        }
+
+        //decrement overflows if needed from left motor
+		if (s_Cur_Motor_State[RIGHT].Overflows_Remaining > 0){
+		  s_Cur_Motor_State[RIGHT].Overflows_Remaining--;
+		}
+      break;
+    case TA0IV_TACCR1:
+		//first check if there are still overflows
+		if (s_Cur_Motor_State[LEFT].Overflows_Remaining == 0){
+			Do_Toggle = true;
+			Motor_ID = LEFT_MOTOR;
+			Counter = &TA0CCR1;
+		}
+		break;
+    case TA0IV_TACCR2:
+		if (s_Cur_Motor_State[RIGHT].Overflows_Remaining == 0){
+			Do_Toggle = true;
+			Motor_ID = RIGHT_MOTOR;
+			Counter = &TA0CCR2;
+		}
+    default: break;
+  }
+  
+  if(Do_Toggle){
 	//motor id's are 1 and 2 to differentiate (can tell either or both) so index is 0, 1
-	INDEX = --Motor_ID;
+	INDEX = Motor_ID - 1;
 
 	//check whether the motor has reached its termination criteria
 	if (s_Cur_Motor_State[INDEX].Step_Count < s_Cur_Motor_State[INDEX].Step_Target){
@@ -318,11 +403,6 @@ void Motor_Toggle(	unsigned int Motor_ID,
 		//reset the overflow count
 		s_Cur_Motor_State[INDEX].Overflows_Remaining = s_Cur_Motor_State[INDEX].Num_Overflows;
 
-		//if the counter loops around then add an overflow
-		if ((0xFFFFu - *Counter) < s_Cur_Motor_State[INDEX].Num_Leftover){
-			s_Cur_Motor_State[INDEX].Overflows_Remaining++;
-		}
-
 		//this sets the provided register (taccr1 or taccr2)
 		*Counter += s_Cur_Motor_State[INDEX].Num_Leftover;
 
@@ -350,109 +430,19 @@ void Motor_Toggle(	unsigned int Motor_ID,
 		//never save the state when the motor exits naturally
 		if(INDEX==LEFT){
 			Stop_Motor(LEFT_MOTOR,false);
+			//turn off interrupts
+			TA0CCTL1 &= ~CCIE;
 		}
 		else if(INDEX==RIGHT){
 			Stop_Motor(RIGHT_MOTOR,false);
+			//turn off interrupts
+			TA0CCTL2 &= ~CCIE;
 		}
 	}
 	//check here for exit condition
 	//stop interrupts if no motors are running
 	if ((s_Cur_Motor_State[LEFT].Is_Running == false) && (s_Cur_Motor_State[RIGHT].Is_Running == false)){
-		*Exit_LPM = true;
+		__bic_SR_register_on_exit(CPUOFF);
 	}
-}
-
-
-void Hold_Until_Finished(void){
-  __bis_SR_register(CPUOFF + GIE); 
-  //while((s_Cur_Motor_State[LEFT].Is_Running == true) || (s_Cur_Motor_State[RIGHT].Is_Running == true)){
-  //}
-}
-
-//**********************************************************************************************************||
-//composite functions
-//**********************************************************************************************************||
-//these functions just package the basic functions into easier to use forms with common constants supplied
-//for typical behaviour (turn (left/right), straight (backwards/forwards)
-//**********************************************************************************************************||
-//**********************************************************************************************************||
-
-void Turn(unsigned int Direction, unsigned int Profile_ID){
-  if(Direction == LEFT){
-      Set_Motor(BOTH_MOTORS,TURN_LEFT,cad_Distance_Per_90[LEFT],Profile_ID);
-      Start_Motor(BOTH_MOTORS);
-      Hold_Until_Finished();
   }
-  else{
-      Set_Motor(BOTH_MOTORS,TURN_RIGHT,cad_Distance_Per_90[RIGHT],Profile_ID);
-      Start_Motor(BOTH_MOTORS);
-      Hold_Until_Finished();
-  }
-}
-
-void Straight(unsigned int Direction, unsigned long Distance, unsigned int Profile_ID){
-  if (Direction == FORWARD){
-    Set_Motor(BOTH_MOTORS,BOTH_FORWARD,Distance, Profile_ID);
-    Start_Motor(BOTH_MOTORS);
-    Hold_Until_Finished();
-  }
-  else{
-    Set_Motor(BOTH_MOTORS,BOTH_BACKWARD,Distance, Profile_ID);
-    Start_Motor(BOTH_MOTORS);
-    Hold_Until_Finished();
-  }
-}
-
-//**********************************************************************************************************||
-//Interrupts
-//**********************************************************************************************************||
-//this is where the 4 pulse width signals are output.  Each has the same period (so same speed) and each motor has two pulses (A and B)
-//This means that there needs to be a Period/4 frequency of interrupts.
-//**********************************************************************************************************||
-//**********************************************************************************************************||
-
-//#pragma vector=TIMER0_A0_VECTOR
-//__interrupt void TIMER0_CCRO_ISR(void){
-//}
-
-//clear flag here, also updates the
-#pragma vector=TIMER0_A1_VECTOR
-__interrupt void TIMER0_OTHER_ISR(void){
-  unsigned int i;
-  bool b_Exit_LPM = false;
-
-  switch(__even_in_range(TA0IV,0xA)){
-    case TA0IV_TAIFG:
-      for (i = 0; i<2; i++){
-        if (s_Cur_Motor_State[i].Overflows_Remaining > 0){
-          s_Cur_Motor_State[i].Overflows_Remaining--;
-        }
-      }
-      break;
-    case TA0IV_TACCR1:
-		//first check if there are still overflows
-		if (s_Cur_Motor_State[LEFT].Overflows_Remaining == 0){
-			Motor_Toggle(LEFT_MOTOR,&TA0CCR1,&b_Exit_LPM);
-			//check if need to turn off interrupts
-			if (s_Cur_Motor_State[LEFT].Is_Running == false){
-				TA0CCTL1 &= ~CCIE;
-			}
-		}
-      break;
-    case TA0IV_TACCR2:
-    	if (s_Cur_Motor_State[RIGHT].Overflows_Remaining == 0){
-    		Motor_Toggle(RIGHT_MOTOR,&TA0CCR2, &b_Exit_LPM);
-			//check if need to turn off interrupts
-			if (s_Cur_Motor_State[RIGHT].Is_Running == false){
-				TA0CCTL2 &= ~CCIE;
-			}
-    	}
-    default: break;
-  }
-  
-  //both motors are off
-  if (b_Exit_LPM){
-    __bic_SR_register_on_exit(CPUOFF);
-  }
-  //TA0CTL &= ~TAIFG;
 }
