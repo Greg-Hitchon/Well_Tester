@@ -38,34 +38,36 @@ void Hold_Until_Finished(void);
 //core preprocessor constants (distance in 0.1mm, frequency in KHz, time is in 1/100(seconds))
 #define DIST_PER_ROT            (2500)
 #define STEPS_PER_ROT           (203UL)
-#define MIN_RPM                 (10UL)
-#define MAX_RPM                 (100UL)
 #define NUM_NAV_PROFILES		(2)
+#define MIN_TICK_INCREMENT		(20)
 
 //this constant is used to calculate the initial period in the acceleration profile (Note we are assuming acceleration from 0 and deceleration to 0)
 //for a linear ramp this constant can be found usingn the expression (empirically derived): C= 1/(0.6156*N^(-0.476)) where N is the number of steps before the target period is reached
 //it is clear why this is not the best to calculate dynamically, a few values are; N=100->C=15, N=203->C=19, N=400->C=28, N=2000->C=60
-#define SCALING_CONSTANT		(28)
-#define ACC_STEPS				(2000)
-#define DEC_STEPS				(203)
-#define START_SPEED				(20UL)
+#define SCALING_CONSTANT		(19)
+#define ACC_STEPS				(5000)
+#define DEC_STEPS				(5000)
+#define MIN_START_SPEED			(10000UL)
+#define MIN_END_SPEED			(10000UL)
 
 //secondary (calculated) values
 #define DISTANCE_PER_STEP               ((unsigned  int) (DIST_PER_ROT/STEPS_PER_ROT))
-#define MAX_PERIOD				((unsigned long) (((150000UL*CLOCK_FREQ)/((MIN_RPM + (MAX_RPM-MIN_RPM)*(START_SPEED)*STEPS_PER_ROT))*10UL)))
+#define MAX_START_PERIOD				((unsigned long) ((CLOCK_FREQ*1000000LL)/(4*MIN_START_SPEED)))
+#define MAX_END_PERIOD					((unsigned long) ((CLOCK_FREQ*1000000LL)/(4*MIN_END_SPEED)))
+
 
 //**********************************************************************************************************||
 //constants (calibration and system parameters)
 //**********************************************************************************************************||
-const unsigned int cad_Distance_Per_90[2] = {16250, 16250};
+const unsigned int cad_Distance_Per_90[2] = {1000, 1000};
 
 //**********************************************************************************************************||
 //**********************************************************************************************************||
 
 //structs
 struct Motor_State {
-	unsigned long Step_Target, Step_Count, Tick_Total;
-    unsigned int Bit_States, Edge_State, Overflows_Remaining, Profile_ID, Num_Leftover, Num_Overflows, Step_Target_By_2;
+	unsigned long Step_Target, Step_Target_By_2, Step_Count, Tick_Total;
+    unsigned int Bit_States, Edge_State, Overflows_Remaining, Profile_ID, Num_Leftover, Num_Overflows, Num_Last;
 	bool Is_Running, Is_Forwards;
 };
 
@@ -88,7 +90,7 @@ struct Nav_Profile s_Nav_Profiles[NUM_NAV_PROFILES];
 //**********************************************************************************************************||
 
 void Create_Nav_Profile(unsigned int Profile_ID,
-						unsigned int Target_Speed,
+						unsigned long Target_Speed,
 						bool Do_Acc,
 						bool Do_Dec){
 
@@ -96,15 +98,16 @@ void Create_Nav_Profile(unsigned int Profile_ID,
 	if (Profile_ID < NUM_NAV_PROFILES){
 
 		//get starting ticks
-		s_Nav_Profiles[Profile_ID].Middle_Ticks = ((unsigned long) (((150000UL*CLOCK_FREQ)/((MIN_RPM + (MAX_RPM-MIN_RPM)*((unsigned long) Target_Speed))*STEPS_PER_ROT))*10UL));
+		s_Nav_Profiles[Profile_ID].Middle_Ticks = (unsigned long) ((CLOCK_FREQ*1000000LL)/(4*Target_Speed));
+		//s_Nav_Profiles[Profile_ID].Middle_Ticks = ((unsigned long) (((150000UL*CLOCK_FREQ)/((MIN_RPM + (MAX_RPM-MIN_RPM)*((unsigned long) Target_Speed))*STEPS_PER_ROT))*10UL));
 
 		if (Do_Acc){
 			//scale the ticks value if acceleration is set
 			s_Nav_Profiles[Profile_ID].Start_Ticks = s_Nav_Profiles[Profile_ID].Middle_Ticks*SCALING_CONSTANT;
 
 			//check if this is greater than the max period
-			if (s_Nav_Profiles[Profile_ID].Start_Ticks > MAX_PERIOD){
-				s_Nav_Profiles[Profile_ID].Start_Ticks = MAX_PERIOD;
+			if (s_Nav_Profiles[Profile_ID].Start_Ticks > MAX_START_PERIOD){
+				s_Nav_Profiles[Profile_ID].Start_Ticks = MAX_START_PERIOD;
 			}
 		}
 		else {
@@ -116,6 +119,11 @@ void Create_Nav_Profile(unsigned int Profile_ID,
 
 		//get starting leftover
 		s_Nav_Profiles[Profile_ID].Num_Leftover = ((unsigned int) ((s_Nav_Profiles[Profile_ID].Start_Ticks) % 0xFFFFUL));
+
+		//adjust for minimum
+		if (s_Nav_Profiles[Profile_ID].Num_Leftover < MIN_TICK_INCREMENT){
+			s_Nav_Profiles[Profile_ID].Num_Leftover = MIN_TICK_INCREMENT;
+		}
 
 		//this lets the interrupt loop know that period will need adjustment
 		s_Nav_Profiles[Profile_ID].Has_DEC = Do_Dec;
@@ -129,7 +137,7 @@ void Create_Nav_Profile(unsigned int Profile_ID,
 
 void Set_Timer(void){
   //continuous mode, interrupts enabled, smclk sourcee
-  TA0CTL = TASSEL_2 | TAIE | MC_2;
+  TA0CTL = TASSEL_2 | MC_2;
 }
 
 void Shutdown_Timer(void){
@@ -151,8 +159,6 @@ void Set_Motor(	unsigned int Motor_ID,
 				unsigned long Right_Distance,
 				unsigned int Left_Profile_ID,
 				unsigned int Right_Profile_ID){
-
-	unsigned int i;
 
 	//reset states here as we are not explicitly filling the entire struct
 	Clear_State(Motor_ID);
@@ -343,105 +349,114 @@ void Straight(	unsigned int Direction,
 //clear flag here, also updates the
 #pragma vector=TIMER0_A1_VECTOR
 __interrupt void TIMER0_OTHER_ISR(void){
-  unsigned int i, Motor_ID, INDEX, Profile_ID;
-  bool Do_Toggle = false;
-  unsigned int volatile *Counter;
+  static unsigned int INDEX, Profile_ID;
+  static bool Do_Toggle;
+  static unsigned int volatile *Counter;
 
   switch(__even_in_range(TA0IV,0xA)){
-    case TA0IV_TAIFG:
-    	//decrement overflows if needed from left motor
-        if (s_Cur_Motor_State[LEFT].Overflows_Remaining > 0){
-          s_Cur_Motor_State[LEFT].Overflows_Remaining--;
-        }
-
-        //decrement overflows if needed from left motor
-		if (s_Cur_Motor_State[RIGHT].Overflows_Remaining > 0){
-		  s_Cur_Motor_State[RIGHT].Overflows_Remaining--;
-		}
-      break;
     case TA0IV_TACCR1:
-		//first check if there are still overflows
-		if (s_Cur_Motor_State[LEFT].Overflows_Remaining == 0){
+    	//"overflow" means one full timer count in this case 2^16-1
+    	if (s_Cur_Motor_State[LEFT].Overflows_Remaining > 0){
+			  s_Cur_Motor_State[LEFT].Overflows_Remaining--;
+    	}
+    	else{
 			Do_Toggle = true;
-			Motor_ID = LEFT_MOTOR;
+			INDEX = LEFT_MOTOR - 1;
 			Counter = &TA0CCR1;
 		}
 		break;
     case TA0IV_TACCR2:
-		if (s_Cur_Motor_State[RIGHT].Overflows_Remaining == 0){
+    	//"overflow" means one full timer count in this case 2^16-1
+		if (s_Cur_Motor_State[RIGHT].Overflows_Remaining > 0){
+			  s_Cur_Motor_State[RIGHT].Overflows_Remaining--;
+		}
+		else{
 			Do_Toggle = true;
-			Motor_ID = RIGHT_MOTOR;
+			INDEX = RIGHT_MOTOR - 1;
 			Counter = &TA0CCR2;
 		}
     default: break;
   }
   
   if(Do_Toggle){
-	//motor id's are 1 and 2 to differentiate (can tell either or both) so index is 0, 1
-	INDEX = Motor_ID - 1;
+	 //reset var
+	 Do_Toggle = false;
 
 	//check whether the motor has reached its termination criteria
 	if (s_Cur_Motor_State[INDEX].Step_Count < s_Cur_Motor_State[INDEX].Step_Target){
 		//so as to not access the structure all the time save profile ID
-		Profile_ID = s_Cur_Motor_State[INDEX].Profile_ID;
+		//Profile_ID = s_Cur_Motor_State[INDEX].Profile_ID;
 
-		//within this if statement we perform all the actions needed on a per STEP basis such as acceleration
-		if (++s_Cur_Motor_State[INDEX].Edge_State == 4){
-			//reset state
-			s_Cur_Motor_State[INDEX].Edge_State = 0;
-
-			//increment step counter
-			s_Cur_Motor_State[INDEX].Step_Count++;
-
-			//check for acceleration
-			if (s_Nav_Profiles[Profile_ID].Has_ACC){
-				//check for acceleration update here
-				if (	(s_Cur_Motor_State[INDEX].Tick_Total > s_Nav_Profiles[Profile_ID].Middle_Ticks) &&
-						(s_Cur_Motor_State[INDEX].Step_Count <= ACC_STEPS) &&
-						(s_Cur_Motor_State[INDEX].Step_Count <= s_Cur_Motor_State[INDEX].Step_Target_By_2)){
-					//adjust the period
-					s_Cur_Motor_State[INDEX].Tick_Total -= (2*s_Cur_Motor_State[INDEX].Tick_Total)/(4*s_Cur_Motor_State[INDEX].Step_Count + 1);
-
-					//check for overshoot
-					if (s_Cur_Motor_State[INDEX].Tick_Total < s_Nav_Profiles[Profile_ID].Middle_Ticks){
-						s_Cur_Motor_State[INDEX].Tick_Total = s_Nav_Profiles[Profile_ID].Middle_Ticks;
-					}
-
-					//adjust the overflow total and leftover
-					s_Cur_Motor_State[INDEX].Num_Overflows = (s_Cur_Motor_State[INDEX].Tick_Total/0x10000UL);
-					s_Cur_Motor_State[INDEX].Num_Leftover = (s_Cur_Motor_State[INDEX].Tick_Total % 0xFFFFUL);
-				}
-			}
-
-			//check for deceleration
-			if (s_Nav_Profiles[Profile_ID].Has_DEC){
-				//check for acceleration update here
-				if ((	(s_Cur_Motor_State[INDEX].Tick_Total < MAX_PERIOD) &&
-						(s_Cur_Motor_State[INDEX].Step_Target - s_Cur_Motor_State[INDEX].Step_Count) <= DEC_STEPS) &&
-						(s_Cur_Motor_State[INDEX].Step_Count > s_Cur_Motor_State[INDEX].Step_Target_By_2)){
-					//adjust the period between ticks
-					s_Cur_Motor_State[INDEX].Tick_Total += (2*s_Cur_Motor_State[INDEX].Tick_Total)/(4*(s_Cur_Motor_State[INDEX].Step_Target - s_Cur_Motor_State[INDEX].Step_Count) + 1);
-
-					//adjust for overshoot here
-					if (s_Cur_Motor_State[INDEX].Tick_Total > MAX_PERIOD){
-						s_Cur_Motor_State[INDEX].Tick_Total = MAX_PERIOD;
-					}
-
-					//adjust the overflow total and leftover
-					s_Cur_Motor_State[INDEX].Num_Overflows = (s_Cur_Motor_State[INDEX].Tick_Total/0x10000UL);
-					s_Cur_Motor_State[INDEX].Num_Leftover = (s_Cur_Motor_State[INDEX].Tick_Total % 0xFFFFUL);
-				}
-			}
-		}
+		//increment step counter
+		s_Cur_Motor_State[INDEX].Step_Count++;
 
 		//reset the overflow count
 		s_Cur_Motor_State[INDEX].Overflows_Remaining = s_Cur_Motor_State[INDEX].Num_Overflows;
 
-		//this sets the provided register (taccr1 or taccr2)
-		*Counter += s_Cur_Motor_State[INDEX].Num_Leftover;
+		/*
+		//test space
+		s_Cur_Motor_State[INDEX].Tick_Total += 1;
+		//adjust the overflow total and leftover
+		s_Cur_Motor_State[INDEX].Num_Overflows = (s_Cur_Motor_State[INDEX].Tick_Total/0x10000UL);
+		s_Cur_Motor_State[INDEX].Num_Leftover = (s_Cur_Motor_State[INDEX].Tick_Total % 0xFFFFUL);
+
+		//adjust for minimum
+		if (s_Cur_Motor_State[INDEX].Num_Leftover < MIN_TICK_INCREMENT){
+			s_Cur_Motor_State[INDEX].Num_Leftover = MIN_TICK_INCREMENT;
+		}
+		//end test space
+		*/
+
+		/*
+		//check for acceleration update here
+		if (	(s_Nav_Profiles[Profile_ID].Has_ACC) &&
+				(s_Cur_Motor_State[INDEX].Tick_Total > s_Nav_Profiles[Profile_ID].Middle_Ticks) &&
+				(s_Cur_Motor_State[INDEX].Step_Count <= ACC_STEPS) &&
+				(s_Cur_Motor_State[INDEX].Step_Count <= s_Cur_Motor_State[INDEX].Step_Target_By_2)){
+			//adjust the period
+			s_Cur_Motor_State[INDEX].Tick_Total -= (2*s_Cur_Motor_State[INDEX].Tick_Total)/(4*s_Cur_Motor_State[INDEX].Step_Count + 1);
+
+			//check for overshoot
+			if (s_Cur_Motor_State[INDEX].Tick_Total < s_Nav_Profiles[Profile_ID].Middle_Ticks){
+				s_Cur_Motor_State[INDEX].Tick_Total = s_Nav_Profiles[Profile_ID].Middle_Ticks;
+			}
+
+			//adjust the overflow total and leftover
+			s_Cur_Motor_State[INDEX].Num_Overflows = (s_Cur_Motor_State[INDEX].Tick_Total/0x10000UL);
+			s_Cur_Motor_State[INDEX].Num_Leftover = (s_Cur_Motor_State[INDEX].Tick_Total % 0xFFFFUL);
+
+			//adjust for minimum
+			if (s_Cur_Motor_State[INDEX].Num_Leftover < MIN_TICK_INCREMENT){
+				s_Cur_Motor_State[INDEX].Num_Leftover = MIN_TICK_INCREMENT;
+			}
+		}
+
+		//check for deceleration update here
+		if (	(s_Nav_Profiles[Profile_ID].Has_DEC) &&
+				(s_Cur_Motor_State[INDEX].Tick_Total < MAX_END_PERIOD) &&
+				((s_Cur_Motor_State[INDEX].Step_Target - s_Cur_Motor_State[INDEX].Step_Count) <= DEC_STEPS) &&
+				(s_Cur_Motor_State[INDEX].Step_Count > s_Cur_Motor_State[INDEX].Step_Target_By_2)){
+			//adjust the period between ticks
+			s_Cur_Motor_State[INDEX].Tick_Total += (2*s_Cur_Motor_State[INDEX].Tick_Total)/(4*(s_Cur_Motor_State[INDEX].Step_Target - s_Cur_Motor_State[INDEX].Step_Count) + 1);
+
+			//adjust for overshoot here
+			if (s_Cur_Motor_State[INDEX].Tick_Total > MAX_END_PERIOD){
+				s_Cur_Motor_State[INDEX].Tick_Total = MAX_END_PERIOD;
+			}
+
+			//adjust the overflow total and leftover
+			s_Cur_Motor_State[INDEX].Num_Overflows = (s_Cur_Motor_State[INDEX].Tick_Total/0x10000UL);
+			s_Cur_Motor_State[INDEX].Num_Leftover = (s_Cur_Motor_State[INDEX].Tick_Total % 0xFFFFUL);
+
+			//adjust for minimum
+			if (s_Cur_Motor_State[INDEX].Num_Leftover < MIN_TICK_INCREMENT){
+				s_Cur_Motor_State[INDEX].Num_Leftover = MIN_TICK_INCREMENT;
+			}
+		}
+		*/
 
 		//here we check if we are updating A or B output bits (not sure if % would be better here)
-		if ((s_Cur_Motor_State[INDEX].Edge_State == 1) || (s_Cur_Motor_State[INDEX].Edge_State == 3)){
+		if ((s_Cur_Motor_State[INDEX].Edge_State == 0) || (s_Cur_Motor_State[INDEX].Edge_State == 2)){
 			//update the correct pins on A channel here
 			if (INDEX==LEFT){
 				P2OUT ^= BIT_MLA;
@@ -459,6 +474,16 @@ __interrupt void TIMER0_OTHER_ISR(void){
 				P2OUT ^= BIT_MRB;
 			}
 		}
+
+		//within this is used to determine which bits to toggle
+		if (++s_Cur_Motor_State[INDEX].Edge_State == 4){
+			//reset state
+			s_Cur_Motor_State[INDEX].Edge_State = 0;
+		}
+
+		//this sets the provided register (taccr1 or taccr2)
+		s_Cur_Motor_State[INDEX].Num_Last += s_Cur_Motor_State[INDEX].Num_Leftover;
+		*Counter = s_Cur_Motor_State[INDEX].Num_Last;
 	}
 	else{
 		//never save the state when the motor exits naturally
@@ -472,11 +497,15 @@ __interrupt void TIMER0_OTHER_ISR(void){
 			//turn off interrupts
 			TA0CCTL2 &= ~CCIE;
 		}
+
 	}
+
 	//check here for exit condition
 	//stop interrupts if no motors are running
 	if ((s_Cur_Motor_State[LEFT].Is_Running == false) && (s_Cur_Motor_State[RIGHT].Is_Running == false)){
 		__bic_SR_register_on_exit(CPUOFF);
 	}
   }
+
+  TA0IV = 0x0;
 }
