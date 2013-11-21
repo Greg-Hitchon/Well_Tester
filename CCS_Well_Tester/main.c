@@ -111,15 +111,21 @@ void main(void) {
   __enable_interrupt();
   
   //enable interupts at extract bit
-  P1IE |= BIT_EXTRACT;
+  P1DIR &= ~BIT_STARTUP;
+  P1IE |= BIT_STARTUP;
+  //rising edge trigger
+  P1IES &= ~BIT_STARTUP;
   
+  //turn off cpu
+  __bis_SR_register(CPUOFF + GIE);
+
   //***************************
   //NAVIGATION ALGO HERE
   //***************************  
   //set motors to output
   
   //create acceleration profile
-  Create_Nav_Profile(0,20000,false,false);
+  Create_Nav_Profile(0,50000,false,false);
   Create_Nav_Profile(1,40000,true,true);
   //Create_Nav_Profile(1U,100,100,100,50,50);
   for(;;){
@@ -138,7 +144,7 @@ void main(void) {
     Set_Timer();
     //Turn(LEFT,0,0);
     //__delay_cycles(10000000);
-    Straight(FORWARD,40000000UL,40000000UL,0,0);
+    Straight(BACKWARD,40000000UL,40000000UL,0,0);
     __delay_cycles(5000000);
   }
 
@@ -164,11 +170,10 @@ void main(void) {
 
 #pragma vector=PORT1_VECTOR
 __interrupt void PORT1_ISR(void){
-  
-  
+
   if(P1IFG & BIT_EXTRACT){
-    //have to set up intterupt conditions here
-    P1IE = 0x0;
+    //have to set up interupt conditions here
+    P1IE &= ~BIT_EXTRACT;
     Stop_Motor(BOTH_MOTORS,true);
     
     //***************************
@@ -182,13 +187,17 @@ __interrupt void PORT1_ISR(void){
     //restore where we left off
     Restore_State(BOTH_MOTORS);
     Start_Motor(BOTH_MOTORS);
+
+    //reset the interrupts
+    P1IE |= BIT_EXTRACT;
+  }
+  else if(P1IFG & BIT_STARTUP){
+	  __delay_cycles(STARTUP_DELAY_TICKS);
+	  __bic_SR_register_on_exit(CPUOFF);
   }
   
-  
-  //clear fg
+  //clear fgs
   P1IFG = 0x0;
-  //reset the interrupts
-  P1IE = BIT_EXTRACT;
 }
 
 

@@ -9,6 +9,7 @@
 #define BIT_DEFINITIONS_H_
 
 #define BIT_EXTRACT                     (0x10)
+#define BIT_STARTUP						(0x08)
 #define BIT_TXD                         (0x4)
 
 #define LEFT			 	(0x0)
