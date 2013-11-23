@@ -233,5 +233,5 @@ __interrupt void PORT2_ISR(void){
         __bic_SR_register_on_exit(CPUOFF);
       }
   //reset interrupt flag
-   P2IFG = 0x0;
+  P2IFG = 0x0;
 }

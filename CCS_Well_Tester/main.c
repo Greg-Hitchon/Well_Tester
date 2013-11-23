@@ -24,7 +24,8 @@
  *can be used with ADC (multiple LED inputs for instance) and 4 for frequency (converting physical property to oscillator)
  *
  *TO DO LIST:
- *-update the save/restore feature to include acceleration/deceleration
+ *-clarify set up/execute for ADC, FREQ, NAVIGATION, COMMUNICATION
+ *-make printing numbers one function, with parameter for length
  *
  *THINGS DEPENDENT ON CLOCK FREQUENCY:
  *-certain calculations may need to be adjusted (due to integer division/range issues) if clock freq is increased
@@ -106,18 +107,33 @@ void main(void) {
     __delay_cycles(10000000);
   }
   */
+	  //enable test led
+	  P1DIR |= LED_RED | LED_GREEN;
+	  //signal ready
+	  P1OUT = LED_RED;
+
+	//enable interupts at startup bit
+	P1DIR &= ~BIT_STARTUP;
+	P1IE |= BIT_STARTUP;
+	//rising edge trigger
+	P1IES &= ~BIT_STARTUP;
   
-  //enable general interrupts
-  __enable_interrupt();
+	//enable interupts at extract bit
+	/*
+	P1DIR &= ~BIT_EXTRACT;
+	P1IE |= BIT_EXTRACT;
+	//falling edge trigger
+	P1IES |= BIT_EXTRACT;
+  	  */
   
-  //enable interupts at extract bit
-  P1DIR &= ~BIT_STARTUP;
-  P1IE |= BIT_STARTUP;
-  //rising edge trigger
-  P1IES &= ~BIT_STARTUP;
-  
-  //turn off cpu
-  __bis_SR_register(CPUOFF + GIE);
+	//turn off cpu
+	__bis_SR_register(CPUOFF + GIE);
+
+	//indicate active
+	P1OUT |= LED_GREEN;
+	//turn off startup interrupt and configure as output
+	P1IE &= ~BIT_STARTUP;
+	P1DIR |=BIT_STARTUP;
 
   //***************************
   //NAVIGATION ALGO HERE
@@ -125,8 +141,8 @@ void main(void) {
   //set motors to output
   
   //create acceleration profile
-  Create_Nav_Profile(0,50000,false,false);
-  Create_Nav_Profile(1,40000,true,true);
+  Create_Nav_Profile(0,50000);
+  Create_Nav_Profile(1,49750);
   //Create_Nav_Profile(1U,100,100,100,50,50);
   for(;;){
     /*
@@ -140,12 +156,10 @@ void main(void) {
     Shutdown_Timer();
     Print_String("Done Navigation...\r\n\n");
     */
-    Set_Motor_Outputs();
-    Set_Timer();
     //Turn(LEFT,0,0);
     //__delay_cycles(10000000);
-    Straight(BACKWARD,40000000UL,40000000UL,0,0);
-    __delay_cycles(5000000);
+    Straight(FORWARD,40000UL,40000UL,0,1);
+   // __delay_cycles(5000000);
   }
 
   //***************************
@@ -172,7 +186,9 @@ void main(void) {
 __interrupt void PORT1_ISR(void){
 
   if(P1IFG & BIT_EXTRACT){
-    //have to set up interupt conditions here
+	 P1OUT ^= BIT6;
+	 /*
+	 //have to set up interupt conditions here
     P1IE &= ~BIT_EXTRACT;
     Stop_Motor(BOTH_MOTORS,true);
     
@@ -190,8 +206,10 @@ __interrupt void PORT1_ISR(void){
 
     //reset the interrupts
     P1IE |= BIT_EXTRACT;
+    */
   }
   else if(P1IFG & BIT_STARTUP){
+	  P1OUT &= ~LED_RED;
 	  __delay_cycles(STARTUP_DELAY_TICKS);
 	  __bic_SR_register_on_exit(CPUOFF);
   }
