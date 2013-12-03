@@ -101,7 +101,7 @@ unsigned long Frequency_Read(unsigned int Channel,
   //set up timera (continuous mode, source: smclk, clear, interrupts enabled, divide by 8)
   //Divide by 8 here is necessary as if not used the taccr1 misses the increment
   //and the frequency is then 1/full clock cycle (65535)
-  TA1CTL = TASSEL_2 | MC_1 | TAIE | TACLR + ID_3;
+  TA1CTL = TASSEL_2 | MC_1 | TAIE | TACLR | ID_3;
    
   //set up inturrupt period
   TA1CCR0 = TICK_RESOLUTION;

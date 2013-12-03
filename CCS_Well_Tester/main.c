@@ -59,24 +59,23 @@ void main(void) {
   /*
   //test for  number to string conversion
   for (;;){
-    Print_UINT(ui_Tst);
+    Print_UINT(1000UL);
     __delay_cycles(5000000);
   }
   */
   
   /*
   //test for frequency values here
-  int i = 0;
+  //int i = 0;
   for(;;){
     //if(i>(NUM_TEST-1)){
     //  i = 0;
     //}
-   __delay_cycles(100000);
    //FREQ_VAL[i++] = Frequency_Read(BIT0, 1000);   
-   Print_ULONG(Frequency_Read(BIT0,100000000,20000000,true));
-   __delay_cycles(5000000);
+   Print_ULONG(Frequency_Read(BIT0,20000000,20000000,true));
+   __delay_cycles(500000);
    Print_String("\r\n");
-   __delay_cycles(5000000);
+   __delay_cycles(500000);
  //_BIS_SR(LPM4_bits + GIE);
   }
   */
@@ -107,44 +106,52 @@ void main(void) {
     __delay_cycles(10000000);
   }
   */
-	  //enable test led
-	  P1DIR |= LED_RED | LED_GREEN;
-	  //signal ready
-	  P1OUT = LED_RED;
+	//enable test led
+	P1DIR |= LED_RED | LED_GREEN;
+	//signal ready
+	P1OUT = LED_RED;
 
-	//enable interupts at startup bit
+	//*******************************
+	//configure startup bit for input
 	P1DIR &= ~BIT_STARTUP;
-	P1IE |= BIT_STARTUP;
 	//rising edge trigger
 	P1IES &= ~BIT_STARTUP;
-  
-	//enable interupts at extract bit
-	/*
-	P1DIR &= ~BIT_EXTRACT;
-	P1IE |= BIT_EXTRACT;
-	//falling edge trigger
-	P1IES |= BIT_EXTRACT;
-  	  */
+	//enable interrupt
+	P1IE |= BIT_STARTUP;
+	//*******************************
+
+
+	//Print_String("\n\nWait for start...\r\n\n");
   
 	//turn off cpu
 	__bis_SR_register(CPUOFF + GIE);
 
-	//indicate active
-	P1OUT |= LED_GREEN;
 	//turn off startup interrupt and configure as output
 	P1IE &= ~BIT_STARTUP;
 	P1DIR |=BIT_STARTUP;
+
+	//indicate active
+	P1OUT |= LED_GREEN;
+
+	//set up navigation profiles
+	Create_Nav_Profile(0,40000);
+	Create_Nav_Profile(1,17000);
+
+	//*******************************
+	//set extract bit to input
+	P1DIR &= ~BIT_EXTRACT;
+	//rising edge trigger
+	P1IES &= ~BIT_EXTRACT;
+	//enable interrupt
+	//P1IE |= BIT_EXTRACT;
+	//*******************************
 
   //***************************
   //NAVIGATION ALGO HERE
   //***************************  
   //set motors to output
-  
-  //create acceleration profile
-  Create_Nav_Profile(0,50000);
-  Create_Nav_Profile(1,49750);
-  //Create_Nav_Profile(1U,100,100,100,50,50);
-  for(;;){
+
+  //for(;;){
     /*
     Set_Motor_Outputs();
     Print_String("\n\nStart Navigation...\r\n\n");
@@ -155,12 +162,22 @@ void main(void) {
     Straight(BACKWARD,1000U);
     Shutdown_Timer();
     Print_String("Done Navigation...\r\n\n");
-    */
+
     //Turn(LEFT,0,0);
     //__delay_cycles(10000000);
-    Straight(FORWARD,40000UL,40000UL,0,1);
-   // __delay_cycles(5000000);
-  }
+	//Print_String("\n\nStart Navigation...\r\n\n");
+    */
+
+    Straight(FORWARD,15000UL,15000UL,0,0);
+    __delay_cycles(5000000);
+	Turn(RIGHT,0,0);
+    __delay_cycles(5000000);
+    Straight(FORWARD,15000UL,15000UL,0,0);
+    __delay_cycles(5000000);
+    Turn(RIGHT,0,0);
+    __delay_cycles(5000000);
+    Straight(FORWARD,15000UL,15000UL,0,0);
+  //}
 
   //***************************
   //SENSING ALGO HERE
@@ -185,30 +202,42 @@ void main(void) {
 #pragma vector=PORT1_VECTOR
 __interrupt void PORT1_ISR(void){
 
-  if(P1IFG & BIT_EXTRACT){
-	 P1OUT ^= BIT6;
-	 /*
-	 //have to set up interupt conditions here
-    P1IE &= ~BIT_EXTRACT;
-    Stop_Motor(BOTH_MOTORS,true);
-    
-    //***************************
-    //EXTRACTION ALGO HERE
-    //***************************
-    __enable_interrupt();
-    Print_String("extracting...");
-    __delay_cycles(3000000);
-    Print_String("done extracting");
-    
-    //restore where we left off
-    Restore_State(BOTH_MOTORS);
-    Start_Motor(BOTH_MOTORS);
+if(P1IFG & BIT_EXTRACT){
+	/*
+	//toggle led's
+	P1OUT |= LED_RED;
+	P1OUT &= ~LED_GREEN;
 
-    //reset the interrupts
-    P1IE |= BIT_EXTRACT;
-    */
+	//have to set up interupt conditions here
+	P1IE &= ~BIT_EXTRACT;
+	Stop_Motor(BOTH_MOTORS,true);
+
+	//***************************
+	//EXTRACTION ALGO HERE
+	//***************************
+	__enable_interrupt();
+	//Print_String("extracting...");
+	Straight(BACKWARD,4000UL,2000UL,0,0);
+	__delay_cycles(3000000);
+	//Print_String("done extracting");
+
+	//restore where we left off
+	Restore_State(BOTH_MOTORS);
+	Start_Motor(BOTH_MOTORS);
+
+
+	P1OUT |= LED_GREEN;
+
+	P1OUT &= ~LED_RED;
+
+	//reset the interrupts
+	P1IE |= BIT_EXTRACT;
+
+	*/
+
   }
   else if(P1IFG & BIT_STARTUP){
+	  //Print_String("\n\nStarting Program Execution...\r\n\n");
 	  P1OUT &= ~LED_RED;
 	  __delay_cycles(STARTUP_DELAY_TICKS);
 	  __bic_SR_register_on_exit(CPUOFF);
@@ -217,5 +246,6 @@ __interrupt void PORT1_ISR(void){
   //clear fgs
   P1IFG = 0x0;
 }
+
 
 

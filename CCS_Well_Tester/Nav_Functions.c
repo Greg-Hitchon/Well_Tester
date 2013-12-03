@@ -47,7 +47,7 @@ void Hold_Until_Finished(void);
 //**********************************************************************************************************||
 //constants (calibration and system parameters)
 //**********************************************************************************************************||
-const unsigned int cad_Distance_Per_90[2] = {1000, 1000};
+const unsigned long cad_Distance_Per_90[2] = {2002, 2002};
 
 //**********************************************************************************************************||
 //**********************************************************************************************************||
@@ -179,24 +179,16 @@ void Set_Motor(	unsigned int Motor_ID,
 	}
 }
 
-//this will save the current motor state structure
+//this will save the current motor state structure or just clear state, not entirely necessary
 void Stop_Motor(unsigned int Motor_ID, bool Do_Save){
 	//save state (saves all of the current values to the global save vars)
 	if(Do_Save == true){
-          Save_State(Motor_ID);
+		Save_State(Motor_ID);
 	}
 
 	//stop motors by resetting the struct to all 0's
 	Clear_State(Motor_ID);
 
-	//reset bits
-	if (Motor_ID & LEFT_MOTOR){
-		P2OUT &= ~BIT_LEFT_MOTOR;
-	}
-
-	if (Motor_ID & RIGHT_MOTOR){
-		P2OUT &= ~BIT_RIGHT_MOTOR;
-	}
 }
 
 
@@ -238,22 +230,25 @@ void Restore_State(unsigned int Motor_ID){
 
 //before the motors run (and after the running structs have been populated) we need to initialize a few ports/states
 void Start_Motor(unsigned int Motor_ID){
-  //here we set the bit states specified by the "settings" struct
-  if (Motor_ID & LEFT_MOTOR){
-        P2OUT &= ~BIT_LEFT_MOTOR;
-        P2OUT |= s_Cur_Motor_State[LEFT].Bit_States;
-        TA0CCR1 = s_Cur_Motor_State[LEFT].Num_Leftover;
-        //start interrupts
-        TA0CCTL1 |= CCIE;
-  }
+	//make sure we are starting with a blank slate here
+	Set_Motor_Outputs();
 
-  if (Motor_ID & RIGHT_MOTOR){
-        P2OUT &= ~BIT_RIGHT_MOTOR;
-        P2OUT |= s_Cur_Motor_State[RIGHT].Bit_States;
-        TA0CCR2 = s_Cur_Motor_State[RIGHT].Num_Leftover;
-        //start interrupts
-        TA0CCTL2 |= CCIE;
-  }
+	//here we set the bit states specified by the "settings" struct
+	if (Motor_ID & LEFT_MOTOR){
+		P2OUT &= ~BIT_LEFT_MOTOR;
+		P2OUT |= s_Cur_Motor_State[LEFT].Bit_States;
+		TA0CCR1 = s_Cur_Motor_State[LEFT].Num_Leftover;
+		//start interrupts
+		TA0CCTL1 |= CCIE;
+	}
+
+	if (Motor_ID & RIGHT_MOTOR){
+		P2OUT &= ~BIT_RIGHT_MOTOR;
+		P2OUT |= s_Cur_Motor_State[RIGHT].Bit_States;
+		TA0CCR2 = s_Cur_Motor_State[RIGHT].Num_Leftover;
+		//start interrupts
+		TA0CCTL2 |= CCIE;
+	}
 }
 
 //this can be used easily to put the uc into a low power mode waiting for a wakeup call
@@ -275,7 +270,6 @@ void Turn(	unsigned int Direction,
 			unsigned int Right_Profile_ID){
 
 	//do this initialization every time just in case
-	Set_Motor_Outputs();
 	Set_Timer();
 
 	//actually set motors
@@ -298,7 +292,6 @@ void Straight(	unsigned int Direction,
 				unsigned int Right_Profile_ID){
 
 	//do this initialization every time just in case
-	Set_Motor_Outputs();
 	Set_Timer();
 
 	//actually set motors
@@ -361,10 +354,11 @@ __interrupt void TIMER0_OTHER_ISR(void){
 				TA0CCR1 += s_Cur_Motor_State[LEFT].Num_Leftover;
 			}
 			else{
-				//never save the state when the motor exits naturally
-				Stop_Motor(LEFT_MOTOR,false);
 				//turn off interrupts
 				TA0CCTL1 &= ~CCIE;
+
+				//never save the state when the motor exits naturally
+				Clear_State(LEFT_MOTOR);
 
 				//check here for exit condition
 				//stop interrupts if no motors are running
@@ -402,10 +396,11 @@ __interrupt void TIMER0_OTHER_ISR(void){
 				TA0CCR2 += s_Cur_Motor_State[RIGHT].Num_Leftover;
 			}
 			else{
-				//never save the state when the motor exits naturally
-				Stop_Motor(RIGHT_MOTOR,false);
 				//turn off interrupts
 				TA0CCTL2 &= ~CCIE;
+
+				//stop motors by resetting the struct to all 0's
+				Clear_State(RIGHT_MOTOR);
 
 				//check here for exit condition
 				//stop interrupts if no motors are running
