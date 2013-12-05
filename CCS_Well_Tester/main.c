@@ -139,9 +139,9 @@ void main(void) {
 
 	//*******************************
 	//set extract bit to input
-	P1DIR &= ~BIT_EXTRACT;
+	//P1DIR &= ~BIT_EXTRACT;
 	//rising edge trigger
-	P1IES &= ~BIT_EXTRACT;
+	//P1IES &= ~BIT_EXTRACT;
 	//enable interrupt
 	//P1IE |= BIT_EXTRACT;
 	//*******************************
