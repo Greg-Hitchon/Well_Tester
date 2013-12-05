@@ -151,7 +151,7 @@ void main(void) {
   //***************************  
   //set motors to output
 
-  //for(;;){
+  for(;;){
     /*
     Set_Motor_Outputs();
     Print_String("\n\nStart Navigation...\r\n\n");
@@ -168,16 +168,16 @@ void main(void) {
 	//Print_String("\n\nStart Navigation...\r\n\n");
     */
 
-    Straight(FORWARD,15000UL,15000UL,0,0);
+    Straight(FORWARD,8000UL,8000UL,0,0);
     __delay_cycles(5000000);
 	Turn(RIGHT,0,0);
     __delay_cycles(5000000);
-    Straight(FORWARD,15000UL,15000UL,0,0);
-    __delay_cycles(5000000);
-    Turn(RIGHT,0,0);
-    __delay_cycles(5000000);
-    Straight(FORWARD,15000UL,15000UL,0,0);
-  //}
+    //Straight(FORWARD,15000UL,15000UL,0,0);
+    //__delay_cycles(5000000);
+    //Turn(RIGHT,0,0);
+    //__delay_cycles(5000000);
+    //Straight(FORWARD,15000UL,15000UL,0,0);
+  }
 
   //***************************
   //SENSING ALGO HERE
