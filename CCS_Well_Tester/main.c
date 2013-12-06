@@ -56,6 +56,7 @@ void main(void) {
   */
   
   
+
   /*
   //test for  number to string conversion
   for (;;){
@@ -134,8 +135,8 @@ void main(void) {
 	P1OUT |= LED_GREEN;
 
 	//set up navigation profiles
-	Create_Nav_Profile(0,1500,6000,2000,25,25,5,5);
-	Create_Nav_Profile(1,1500,4000,2000,10,10,5,5);
+	Create_Nav_Profile(0,1200,4000,2000,10,10,1,1);
+	Create_Nav_Profile(1,1200,2000,2000,10,10,1,1);
 	//Create_Nav_Profile(1,17000);
 
 	//*******************************
@@ -171,8 +172,41 @@ void main(void) {
 
     Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
     __delay_cycles(5000000);
-	Turn(RIGHT,1,1);
+	Turn(RIGHT,0,0);
     __delay_cycles(5000000);
+    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
+    __delay_cycles(5000000);
+
+    Turn(RIGHT,0,0);
+    __delay_cycles(5000000);
+    Straight(FORWARD,GRID_STEPS,GRID_STEPS,1,1);
+    __delay_cycles(5000000);
+    Turn(RIGHT,0,0);
+    __delay_cycles(5000000);
+    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
+    __delay_cycles(5000000);
+
+    Turn(LEFT,0,0);
+	__delay_cycles(5000000);
+	Straight(FORWARD,GRID_STEPS,GRID_STEPS,1,1);
+	__delay_cycles(5000000);
+	Turn(LEFT,0,0);
+	__delay_cycles(5000000);
+	Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
+	__delay_cycles(5000000);
+
+	Turn(RIGHT,0,0);
+	__delay_cycles(5000000);
+	Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*2,TABLE_LENGTH_STEPS-GRID_STEPS*2,0,0);
+	__delay_cycles(5000000);
+
+	Turn(RIGHT,0,0);
+	__delay_cycles(5000000);
+	Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
+	__delay_cycles(5000000);
+	Turn(RIGHT,0,0);
+	__delay_cycles(5000000);
+
     //Straight(FORWARD,15000UL,15000UL,0,0);
     //__delay_cycles(5000000);
     //Turn(RIGHT,0,0);
