@@ -134,8 +134,9 @@ void main(void) {
 	P1OUT |= LED_GREEN;
 
 	//set up navigation profiles
-	Create_Nav_Profile(0,40000);
-	Create_Nav_Profile(1,17000);
+	Create_Nav_Profile(0,1500,6000,2000,25,25,5,5);
+	Create_Nav_Profile(1,1500,4000,2000,10,10,5,5);
+	//Create_Nav_Profile(1,17000);
 
 	//*******************************
 	//set extract bit to input
@@ -168,9 +169,9 @@ void main(void) {
 	//Print_String("\n\nStart Navigation...\r\n\n");
     */
 
-    Straight(FORWARD,8000UL,8000UL,0,0);
+    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
     __delay_cycles(5000000);
-	Turn(RIGHT,0,0);
+	Turn(RIGHT,1,1);
     __delay_cycles(5000000);
     //Straight(FORWARD,15000UL,15000UL,0,0);
     //__delay_cycles(5000000);

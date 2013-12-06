@@ -20,9 +20,12 @@
 #define FORWARD                         (0x0)
 #define BACKWARD                        (0x1)
 
-#define LEFT_MOTOR 					(0x1U)
-#define RIGHT_MOTOR 		        (0x2U)
-#define BOTH_MOTORS 		        (0x3U)
+//these are a little shady but put to show relationship with left/right explicitly.
+//LEFT/RIGHT have to be 0/1 or 1/0
+#define LEFT_MOTOR 					(LEFT+1)
+#define RIGHT_MOTOR 		        (RIGHT+1)
+#define BOTH_MOTORS 		        (LEFT_MOTOR+RIGHT_MOTOR)
+#define CONC_MOTOR					(LEFT_MOTOR)
 
 #define LEFT_FORWARD 		        (0x1)
 #define LEFT_BACKWARD 		        (0x2)
