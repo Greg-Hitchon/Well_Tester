@@ -137,6 +137,7 @@ void main(void) {
 	//set up navigation profiles
 	Create_Nav_Profile(0,1200,4000,2000,10,10,1,1);
 	Create_Nav_Profile(1,1200,2000,2000,10,10,1,1);
+	Create_Nav_Profile(2,1200,6000,2000,15,15,1,1);
 	//Create_Nav_Profile(1,17000);
 
 	//*******************************
@@ -154,64 +155,87 @@ void main(void) {
   //set motors to output
 
   for(;;){
-    /*
-    Set_Motor_Outputs();
-    Print_String("\n\nStart Navigation...\r\n\n");
-    Set_Timer();
-    Straight(BACKWARD,1000U);
-    Turn(LEFT);
-    Turn(RIGHT);
-    Straight(BACKWARD,1000U);
-    Shutdown_Timer();
-    Print_String("Done Navigation...\r\n\n");
 
-    //Turn(LEFT,0,0);
-    //__delay_cycles(10000000);
 	//Print_String("\n\nStart Navigation...\r\n\n");
-    */
 
+	  ///*
+
+	  //Stright from start then turn left
     Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
     __delay_cycles(5000000);
 	Turn(RIGHT,0,0);
-    __delay_cycles(5000000);
-    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
-    __delay_cycles(5000000);
+	__delay_cycles(5000000);
 
-    Turn(RIGHT,0,0);
-    __delay_cycles(5000000);
-    Straight(FORWARD,GRID_STEPS,GRID_STEPS,1,1);
+	//straight across top of table then turn left
+    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
     __delay_cycles(5000000);
     Turn(RIGHT,0,0);
     __delay_cycles(5000000);
-    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
+
+    //Down left hand side then turn left
+    Straight(FORWARD,GRID_STEPS,GRID_STEPS,0,0);
+    __delay_cycles(5000000);
+    Turn(RIGHT,0,0);
     __delay_cycles(5000000);
 
+    //straight back across table then turn right
+    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
+    __delay_cycles(5000000);
     Turn(LEFT,0,0);
 	__delay_cycles(5000000);
-	Straight(FORWARD,GRID_STEPS,GRID_STEPS,1,1);
+
+	//down right hand side then turn right
+	Straight(FORWARD,GRID_STEPS,GRID_STEPS,0,0);
 	__delay_cycles(5000000);
 	Turn(LEFT,0,0);
 	__delay_cycles(5000000);
-	Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
-	__delay_cycles(5000000);
 
-	Turn(RIGHT,0,0);
-	__delay_cycles(5000000);
-	Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*2,TABLE_LENGTH_STEPS-GRID_STEPS*2,0,0);
-	__delay_cycles(5000000);
-
-	Turn(RIGHT,0,0);
-	__delay_cycles(5000000);
+	//straight across table to left then turn left
 	Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
 	__delay_cycles(5000000);
 	Turn(RIGHT,0,0);
 	__delay_cycles(5000000);
 
-    //Straight(FORWARD,15000UL,15000UL,0,0);
-    //__delay_cycles(5000000);
-    //Turn(RIGHT,0,0);
-    //__delay_cycles(5000000);
-    //Straight(FORWARD,15000UL,15000UL,0,0);
+	//add in two more crosses
+
+	//Down left hand side then turn left
+	Straight(FORWARD,GRID_STEPS,GRID_STEPS,0,0);
+	__delay_cycles(5000000);
+	Turn(RIGHT,0,0);
+	__delay_cycles(5000000);
+
+	//straight back across table then turn right
+	Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
+	__delay_cycles(5000000);
+	Turn(LEFT,0,0);
+	__delay_cycles(5000000);
+
+	//down right hand side then turn right
+	Straight(FORWARD,GRID_STEPS,GRID_STEPS,0,0);
+	__delay_cycles(5000000);
+	Turn(LEFT,0,0);
+	__delay_cycles(5000000);
+
+	//straight across table to left then turn left
+	Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
+	__delay_cycles(5000000);
+	Turn(RIGHT,0,0);
+	__delay_cycles(5000000);
+
+
+	Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*4,TABLE_LENGTH_STEPS-GRID_STEPS*2,0,0);
+	__delay_cycles(5000000);
+
+	Turn(RIGHT,0,0);
+	__delay_cycles(5000000);
+	Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
+	__delay_cycles(5000000);
+	Turn(RIGHT,0,0);
+	__delay_cycles(5000000);
+     //*/
+
+	  //Straight(FORWARD,600,600,0,0);
+	  //Straight(FORWARD,1000,2500,1,2);
   }
 
   //***************************

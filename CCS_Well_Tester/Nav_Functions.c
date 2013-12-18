@@ -36,7 +36,7 @@ void Hold_Until_Finished(void);
 
 
 //core preprocessor constants (distance in 0.1mm, frequency in KHz, time is in 1/100(seconds))
-#define NUM_NAV_PROFILES		(2)
+#define NUM_NAV_PROFILES		(3)
 #define MIN_TICK_INCREMENT		(1000)
 
 //secondary (calculated) values
@@ -45,7 +45,7 @@ void Hold_Until_Finished(void);
 //**********************************************************************************************************||
 //constants (calibration and system parameters)
 //**********************************************************************************************************||
-const unsigned long cad_Steps_Per_90[2] = {167, 167};
+const unsigned long cad_Steps_Per_90[2] = {166, 166};
 
 //**********************************************************************************************************||
 //**********************************************************************************************************||
