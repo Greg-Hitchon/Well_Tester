@@ -11,6 +11,7 @@
 //function prototypes
 void Final_Run();
 void Square();
+void Line();
 
 /*
  * main.c
@@ -156,8 +157,9 @@ void main(void) {
   //***************************
   //NAVIGATION ALGO HERE
   //***************************  
+	Line();
 	Square();
-  Final_Run();
+	Final_Run();
 
 
 
@@ -179,6 +181,16 @@ void main(void) {
   //Program end
   //***************************
   while(1);
+}
+
+
+void Line()
+{
+	for(;;){
+		//Stright from start then turn left
+		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
+		__delay_cycles(5000000);
+	}
 }
 
 

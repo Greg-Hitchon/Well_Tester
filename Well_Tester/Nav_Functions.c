@@ -45,7 +45,7 @@ void Hold_Until_Finished(void);
 //**********************************************************************************************************||
 //constants (calibration and system parameters)
 //**********************************************************************************************************||
-const unsigned long cad_Steps_Per_90[2] = {170, 166};
+const unsigned long cad_Steps_Per_90[2] = {166, 166};
 
 //**********************************************************************************************************||
 //**********************************************************************************************************||
@@ -176,7 +176,7 @@ void Set_Motor(	unsigned int Motor_ID,
 	aui_ID[RIGHT] = Right_Profile_ID;
 
 	//if each motor profile id is the same then run concurrently
-	Is_Concurrent = (Left_Profile_ID == Right_Profile_ID);
+	Is_Concurrent = ((Left_Profile_ID == Right_Profile_ID) && (Left_Steps == Right_Steps));
 
 	//even if running concurently need to adjust for direction
 	if (Motor_ID & LEFT_MOTOR){
