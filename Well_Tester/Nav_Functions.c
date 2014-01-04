@@ -36,7 +36,7 @@ void Hold_Until_Finished(void);
 
 
 //core preprocessor constants (distance in 0.1mm, frequency in KHz, time is in 1/100(seconds))
-#define NUM_NAV_PROFILES		(3)
+#define NUM_NAV_PROFILES		(2)
 #define MIN_TICK_INCREMENT		(1000)
 
 //secondary (calculated) values
@@ -45,7 +45,7 @@ void Hold_Until_Finished(void);
 //**********************************************************************************************************||
 //constants (calibration and system parameters)
 //**********************************************************************************************************||
-const unsigned long cad_Steps_Per_90[2] = {166, 166};
+const unsigned long cad_Steps_Per_90[2] = {171, 171};
 
 //**********************************************************************************************************||
 //**********************************************************************************************************||
@@ -67,7 +67,7 @@ struct Nav_Profile{
 };
 
 struct Motor_State s_Cur_Motor_State[2];
-struct Motor_State s_Sv_Motor_State[2];
+//struct Motor_State s_Sv_Motor_State[2];
 struct Nav_Profile s_Nav_Profiles[NUM_NAV_PROFILES];
 
 //**********************************************************************************************************||
@@ -136,13 +136,8 @@ void Create_Nav_Profile(unsigned int Profile_ID,
 
 
 void Set_Timer(void){
-  //continuous mode, overflow interrupt disabled, smclk source, no divider
+  //continuous mode, overflow interrupt disabled, smclk source, divide by 8
   TA0CTL = TASSEL_2 | MC_2 | ID_3;
-}
-
-void Shutdown_Timer(void){
-	//this just clears the control register
-	TA0CTL = 0x0;
 }
 
 void Set_Motor_Outputs(void){
@@ -279,17 +274,6 @@ void Set_Motor(	unsigned int Motor_ID,
 	}
 }
 
-//this will save the current motor state structure or just clear state, not entirely necessary
-void Stop_Motor(unsigned int Motor_ID, bool Do_Save){
-	//save state (saves all of the current values to the global save vars)
-	if(Do_Save == true){
-		Save_State(Motor_ID);
-	}
-
-	//stop motors by resetting the struct to all 0's
-	Clear_State(Motor_ID);
-}
-
 
 void Clear_State(unsigned int Motor_ID){
 	static const struct Motor_State Empty_Struct = {0};
@@ -303,6 +287,7 @@ void Clear_State(unsigned int Motor_ID){
 	}
 }
 
+/*
 //copies over the specified structure to the save motor array
 void Save_State(unsigned int Motor_ID){
 	if (Motor_ID & LEFT_MOTOR){
@@ -326,6 +311,7 @@ void Restore_State(unsigned int Motor_ID){
     s_Cur_Motor_State[RIGHT] = s_Sv_Motor_State[RIGHT];
   }
 }
+*/
 
 //before the motors run (and after the running structs have been populated) we need to initialize a few ports/states
 void Start_Motor(unsigned int Motor_ID){
@@ -425,8 +411,8 @@ __interrupt void TIMER0_CCRO_ISR(void){
 #pragma vector=TIMER0_A1_VECTOR
 __interrupt void TIMER0_OTHER_ISR(void){
 	//bit flag
-	static unsigned int ui_Bit_Flag_A, ui_Bit_Flag_B, ui_Motor_Index;
-	static bool b_Do_Update = false;
+	unsigned int ui_Bit_Flag_A, ui_Bit_Flag_B, ui_Motor_Index;
+	bool b_Do_Update = false;
 
 	//flags reset by reading ta0iv
 	switch(__even_in_range(TA0IV,0xA)){

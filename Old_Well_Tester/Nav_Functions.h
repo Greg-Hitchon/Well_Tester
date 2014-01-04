@@ -11,13 +11,14 @@
 #define NAV_FUNCTIONS_H_
 
 __interrupt void TIMER0_OTHER_ISR(void);
+void Stop_Motor(unsigned int Motor_ID, bool Do_Save);
 void Restore_State(unsigned int Motor_ID);
 void Set_Timer(void);
 void Set_Motor_Outputs(void);
 void Start_Motor(unsigned int Motor_ID);
 void Straight(	unsigned int Direction,
-				unsigned long Left_Steps,
-				unsigned long Right_Steps,
+				unsigned long Left_Distance,
+				unsigned long Right_Distance,
 				unsigned int Left_Profile_ID,
 				unsigned int Right_Profile_ID);
 
@@ -26,18 +27,12 @@ void Turn(	unsigned int Direction,
 			unsigned int Right_Profile_ID);
 
 void Create_Nav_Profile(unsigned int Profile_ID,
-						unsigned int Start_Speed,
-						unsigned int Target_Speed,
-						unsigned int End_Speed,
-						unsigned int ACC_Rate,
-						unsigned int DEC_Rate,
-						unsigned int ACC_Period,
-						unsigned int DEC_Period);
+						unsigned long Target_Speed);
 
 void Set_Motor(	unsigned int Motor_ID,
 				unsigned int Direction,
-				unsigned long Left_Steps,
-				unsigned long Right_Steps,
+				unsigned long Left_Distance,
+				unsigned long Right_Distance,
 				unsigned int Left_Profile_ID,
 				unsigned int Right_Profile_ID);
 

@@ -8,11 +8,6 @@
 #include "Communication_Functions.h"
 #include "cstbool.h"
 
-//function prototypes
-void Final_Run();
-void Square();
-void Line();
-
 /*
  * main.c
  *
@@ -61,7 +56,6 @@ void main(void) {
   */
   
   
-
   /*
   //test for  number to string conversion
   for (;;){
@@ -140,28 +134,50 @@ void main(void) {
 	P1OUT |= LED_GREEN;
 
 	//set up navigation profiles
-	Create_Nav_Profile(0,3250,4500,3000,10,10,1,1);
-	//Create_Nav_Profile(1,3100,3100,3100,10,10,1,1);
-	//Create_Nav_Profile(0,1200,4000,2000,10,10,1,1);
-	//Create_Nav_Profile(1,1200,2000,2000,10,10,1,1);
+	Create_Nav_Profile(0,20000);
+	Create_Nav_Profile(1,17000);
 
 	//*******************************
 	//set extract bit to input
-	P1DIR &= ~BIT_EXTRACT;
-	//falling edge trigger
-	P1IES |= BIT_EXTRACT;
+	//P1DIR &= ~BIT_EXTRACT;
+	//rising edge trigger
+	//P1IES &= ~BIT_EXTRACT;
 	//enable interrupt
-	P1IE |= BIT_EXTRACT;
+	//P1IE |= BIT_EXTRACT;
 	//*******************************
 
   //***************************
   //NAVIGATION ALGO HERE
   //***************************  
-	//Line();
-	//Square();
-	Final_Run();
+  //set motors to output
 
+  for(;;){
+    /*
+    Set_Motor_Outputs();
+    Print_String("\n\nStart Navigation...\r\n\n");
+    Set_Timer();
+    Straight(BACKWARD,1000U);
+    Turn(LEFT);
+    Turn(RIGHT);
+    Straight(BACKWARD,1000U);
+    Shutdown_Timer();
+    Print_String("Done Navigation...\r\n\n");
 
+    //Turn(LEFT,0,0);
+    //__delay_cycles(10000000);
+	//Print_String("\n\nStart Navigation...\r\n\n");
+    */
+
+    Straight(FORWARD,8000UL,8000UL,0,0);
+    __delay_cycles(5000000);
+	Turn(RIGHT,0,0);
+    __delay_cycles(5000000);
+    //Straight(FORWARD,15000UL,15000UL,0,0);
+    //__delay_cycles(5000000);
+    //Turn(RIGHT,0,0);
+    //__delay_cycles(5000000);
+    //Straight(FORWARD,15000UL,15000UL,0,0);
+  }
 
   //***************************
   //SENSING ALGO HERE
@@ -183,129 +199,10 @@ void main(void) {
   while(1);
 }
 
-
-void Line()
-{
-	for(;;){
-		//Stright from start then turn left
-		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
-		__delay_cycles(5000000);
-	}
-}
-
-
-void Square()
-{
-	for(;;){
-		//Stright from start then turn left
-		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
-		__delay_cycles(5000000);
-		Turn(RIGHT,0,0);
-		__delay_cycles(5000000);
-	}
-}
-
-
-void Final_Run()
-{
-	int i_Left_Profile = 0, i_Right_Profile = 0;
-
-
-	  for(;;){
-
-		//Print_String("\n\nStart Navigation...\r\n\n");
-
-		  ///*
-
-		  //Stright from start then turn left
-	    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
-	    __delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-
-		//straight across top of table then turn left
-	    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
-	    __delay_cycles(5000000);
-	    Turn(LEFT,i_Left_Profile,i_Right_Profile);
-	    __delay_cycles(5000000);
-
-	    //Down left hand side then turn left
-	    Straight(FORWARD,GRID_STEPS,GRID_STEPS,i_Left_Profile,i_Right_Profile);
-	    __delay_cycles(5000000);
-	    Turn(LEFT,i_Left_Profile,i_Right_Profile);
-	    __delay_cycles(5000000);
-
-	    //straight back across table then turn right
-	    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
-	    __delay_cycles(5000000);
-	    Turn(RIGHT,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-
-		//down right hand side then turn right
-		Straight(FORWARD,GRID_STEPS,GRID_STEPS,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-
-		//straight across table to left then turn left
-		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-
-		//add in two more crosses
-
-		//Down left hand side then turn left
-		Straight(FORWARD,GRID_STEPS,GRID_STEPS,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-
-		//straight back across table then turn right
-		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-
-		//down right hand side then turn right
-		Straight(FORWARD,GRID_STEPS,GRID_STEPS,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-
-		//straight across table to left then turn left
-		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-
-
-		Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*4,TABLE_LENGTH_STEPS-GRID_STEPS*2,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-
-		Turn(LEFT,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-	     //*/
-
-		  //Straight(FORWARD,600,600,0,0);
-		  //Straight(FORWARD,1000,2500,1,2);
-	  }
-
-}
-
 #pragma vector=PORT1_VECTOR
 __interrupt void PORT1_ISR(void){
 
 if(P1IFG & BIT_EXTRACT){
-	//enter infinite loop
-	P1OUT |= LED_RED;
-	P1OUT |= LED_GREEN;
-	for(;;){}
-
 	/*
 	//toggle led's
 	P1OUT |= LED_RED;
