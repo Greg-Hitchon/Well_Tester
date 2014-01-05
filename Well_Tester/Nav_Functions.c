@@ -36,7 +36,7 @@ void Hold_Until_Finished(void);
 
 
 //core preprocessor constants (distance in 0.1mm, frequency in KHz, time is in 1/100(seconds))
-#define NUM_NAV_PROFILES		(2)
+#define NUM_NAV_PROFILES		(1)
 #define MIN_TICK_INCREMENT		(1000)
 
 //secondary (calculated) values
@@ -45,7 +45,8 @@ void Hold_Until_Finished(void);
 //**********************************************************************************************************||
 //constants (calibration and system parameters)
 //**********************************************************************************************************||
-const unsigned long cad_Steps_Per_90[2] = {171, 171};
+const unsigned int cad_Steps_Per_Sweep[2] = {330, 330};
+const unsigned int cad_Steps_Per_Dime[2] = {174, 174};
 
 //**********************************************************************************************************||
 //**********************************************************************************************************||
@@ -358,18 +359,35 @@ void Hold_Until_Finished(void){
 
 void Turn(	unsigned int Direction,
 			unsigned int Left_Profile_ID,
-			unsigned int Right_Profile_ID){
+			unsigned int Right_Profile_ID,
+			unsigned int Type){
 
+
+	if(Type == SWEEP){
 	//actually set motors
-	if(Direction == LEFT){
-		Set_Motor(BOTH_MOTORS,TURN_LEFT,cad_Steps_Per_90[LEFT], cad_Steps_Per_90[RIGHT], Left_Profile_ID, Right_Profile_ID);
-		Start_Motor(BOTH_MOTORS);
-		Hold_Until_Finished();
+		if(Direction == LEFT){
+			Set_Motor(RIGHT_MOTOR,FORWARD, 0, cad_Steps_Per_Sweep[RIGHT], 0, Right_Profile_ID);
+			Start_Motor(RIGHT_MOTOR);
+			Hold_Until_Finished();
+		}
+		else{
+			Set_Motor(LEFT_MOTOR,FORWARD, cad_Steps_Per_Sweep[LEFT],0, Left_Profile_ID, 0);
+			Start_Motor(LEFT_MOTOR);
+			Hold_Until_Finished();
+		}
 	}
 	else{
-		Set_Motor(BOTH_MOTORS,TURN_RIGHT,cad_Steps_Per_90[RIGHT], cad_Steps_Per_90[LEFT], Left_Profile_ID, Right_Profile_ID);
-		Start_Motor(BOTH_MOTORS);
-		Hold_Until_Finished();
+		//actually set motors
+		if(Direction == LEFT){
+			Set_Motor(BOTH_MOTORS,TURN_LEFT,cad_Steps_Per_Dime[LEFT], cad_Steps_Per_Dime[RIGHT], Left_Profile_ID, Right_Profile_ID);
+			Start_Motor(BOTH_MOTORS);
+			Hold_Until_Finished();
+		}
+		else{
+			Set_Motor(BOTH_MOTORS,TURN_RIGHT,cad_Steps_Per_Dime[RIGHT], cad_Steps_Per_Dime[LEFT], Left_Profile_ID, Right_Profile_ID);
+			Start_Motor(BOTH_MOTORS);
+			Hold_Until_Finished();
+		}
 	}
 }
 

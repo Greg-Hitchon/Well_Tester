@@ -6,6 +6,7 @@
 #define         CLOCK_FREQ              16000
 #define 		STARTUP_DELAY_TICKS		30000000
 #define 		TABLE_LENGTH_STEPS		1300
-#define			GRID_STEPS				250
+#define 		TABLE_WIDTH_STEPS		1100
+#define			GRID_STEPS				50
 
 #endif

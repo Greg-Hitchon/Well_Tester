@@ -39,6 +39,7 @@ void Line();
 #define NUM_TEST 15
 
 unsigned long FREQ_VAL[NUM_TEST], ADC_VAL[NUM_TEST];
+bool ub_Extract_Ready = false;
 
 void main(void) {
 
@@ -46,12 +47,12 @@ void main(void) {
   //CONFIGURATION NONSENSE HERE
   //***************************
   WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
-
   
   //set to 1MHZ
   BCSCTL1 = CALBC1_16MHZ;
   DCOCTL = CALDCO_16MHZ;
   
+
   //outputs clock frequency to p1.4
   /*
   P1DIR = BIT4;
@@ -140,7 +141,7 @@ void main(void) {
 	P1OUT |= LED_GREEN;
 
 	//set up navigation profiles
-	Create_Nav_Profile(0,3250,4500,3000,10,10,1,1);
+	Create_Nav_Profile(0,3250,4500,3250,10,10,1,1);
 	//Create_Nav_Profile(1,3100,3100,3100,10,10,1,1);
 	//Create_Nav_Profile(0,1200,4000,2000,10,10,1,1);
 	//Create_Nav_Profile(1,1200,2000,2000,10,10,1,1);
@@ -152,6 +153,8 @@ void main(void) {
 	P1IES |= BIT_EXTRACT;
 	//enable interrupt
 	P1IE |= BIT_EXTRACT;
+	//set global flag
+	ub_Extract_Ready = true;
 	//*******************************
 
   //***************************
@@ -160,22 +163,6 @@ void main(void) {
 	//Line();
 	//Square();
 	Final_Run();
-
-
-
-  //***************************
-  //SENSING ALGO HERE
-  //***************************
-  Print_String("Start Sensing...\r\n\n");
-  
-  //FREQ_VAL = Frequency_Read(BIT5, 1000);
-  Print_String("Done Sensing...\r\n");
-
-  //***************************
-  //COMMUNICATION ALGO HERE
-  //***************************
-  
-  Print_String("Result: Apple Juice");
   
   //***************************
   //Program end
@@ -200,7 +187,7 @@ void Square()
 		//Stright from start then turn left
 		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
 		__delay_cycles(5000000);
-		Turn(RIGHT,0,0);
+		Turn(RIGHT,0,0,DIME);
 		__delay_cycles(5000000);
 	}
 }
@@ -208,49 +195,42 @@ void Square()
 
 void Final_Run()
 {
-	int i_Left_Profile = 0, i_Right_Profile = 0;
-
-
-	  for(;;){
-
-		//Print_String("\n\nStart Navigation...\r\n\n");
-
-		  ///*
+	unsigned int i_Left_Profile = 0, i_Right_Profile = 0;
 
 		  //Stright from start then turn left
 	    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
 	    __delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile);
+		Turn(LEFT,i_Left_Profile,i_Right_Profile,SWEEP);
 		__delay_cycles(5000000);
 
 		//straight across top of table then turn left
-	    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
+	    Straight(FORWARD,TABLE_WIDTH_STEPS,TABLE_WIDTH_STEPS,i_Left_Profile,i_Right_Profile);
 	    __delay_cycles(5000000);
-	    Turn(LEFT,i_Left_Profile,i_Right_Profile);
+	    Turn(LEFT,i_Left_Profile,i_Right_Profile,SWEEP);
 	    __delay_cycles(5000000);
 
 	    //Down left hand side then turn left
 	    Straight(FORWARD,GRID_STEPS,GRID_STEPS,i_Left_Profile,i_Right_Profile);
 	    __delay_cycles(5000000);
-	    Turn(LEFT,i_Left_Profile,i_Right_Profile);
+	    Turn(LEFT,i_Left_Profile,i_Right_Profile,DIME);
 	    __delay_cycles(5000000);
 
 	    //straight back across table then turn right
-	    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
+	    Straight(FORWARD,TABLE_WIDTH_STEPS,TABLE_WIDTH_STEPS,i_Left_Profile,i_Right_Profile);
 	    __delay_cycles(5000000);
-	    Turn(RIGHT,i_Left_Profile,i_Right_Profile);
+	    Turn(RIGHT,i_Left_Profile,i_Right_Profile,SWEEP);
 		__delay_cycles(5000000);
 
 		//down right hand side then turn right
 		Straight(FORWARD,GRID_STEPS,GRID_STEPS,i_Left_Profile,i_Right_Profile);
 		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile,i_Right_Profile);
+		Turn(RIGHT,i_Left_Profile,i_Right_Profile, DIME);
 		__delay_cycles(5000000);
 
 		//straight across table to left then turn left
-		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
+		Straight(FORWARD,TABLE_WIDTH_STEPS,TABLE_WIDTH_STEPS,i_Left_Profile,i_Right_Profile);
 		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile);
+		Turn(LEFT,i_Left_Profile,i_Right_Profile, SWEEP);
 		__delay_cycles(5000000);
 
 		//add in two more crosses
@@ -258,53 +238,42 @@ void Final_Run()
 		//Down left hand side then turn left
 		Straight(FORWARD,GRID_STEPS,GRID_STEPS,i_Left_Profile,i_Right_Profile);
 		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile);
+		Turn(LEFT,i_Left_Profile,i_Right_Profile, DIME);
 		__delay_cycles(5000000);
 
 		//straight back across table then turn right
-		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
+		Straight(FORWARD,TABLE_WIDTH_STEPS,TABLE_WIDTH_STEPS,i_Left_Profile,i_Right_Profile);
 		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile,i_Right_Profile);
+		Turn(RIGHT,i_Left_Profile,i_Right_Profile, SWEEP);
 		__delay_cycles(5000000);
 
 		//down right hand side then turn right
 		Straight(FORWARD,GRID_STEPS,GRID_STEPS,i_Left_Profile,i_Right_Profile);
 		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile,i_Right_Profile);
+		Turn(RIGHT,i_Left_Profile,i_Right_Profile, DIME);
 		__delay_cycles(5000000);
 
 		//straight across table to left then turn left
-		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
+		Straight(FORWARD,TABLE_WIDTH_STEPS,TABLE_WIDTH_STEPS,i_Left_Profile,i_Right_Profile);
 		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-
-
-		Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*4,TABLE_LENGTH_STEPS-GRID_STEPS*2,i_Left_Profile,i_Right_Profile);
+		Turn(LEFT,i_Left_Profile,i_Right_Profile, SWEEP);
 		__delay_cycles(5000000);
 
-		Turn(LEFT,i_Left_Profile,i_Right_Profile);
+		Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*2,TABLE_LENGTH_STEPS-GRID_STEPS*2,i_Left_Profile,i_Right_Profile);
 		__delay_cycles(5000000);
-		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile);
-		__delay_cycles(5000000);
-	     //*/
-
-		  //Straight(FORWARD,600,600,0,0);
-		  //Straight(FORWARD,1000,2500,1,2);
-	  }
-
 }
 
 #pragma vector=PORT1_VECTOR
 __interrupt void PORT1_ISR(void){
 
-if(P1IFG & BIT_EXTRACT){
+if((P1IFG & BIT_EXTRACT) && ub_Extract_Ready){
 	//enter infinite loop
 	P1OUT |= LED_RED;
-	P1OUT |= LED_GREEN;
-	for(;;){}
+	P1OUT &= ~LED_GREEN;
+	for(;;){
+		P1OUT ^= LED_RED | LED_GREEN;
+	__delay_cycles(8000000);
+	}
 
 	/*
 	//toggle led's

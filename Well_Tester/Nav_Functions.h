@@ -23,7 +23,8 @@ void Straight(	unsigned int Direction,
 
 void Turn(	unsigned int Direction,
 			unsigned int Left_Profile_ID,
-			unsigned int Right_Profile_ID);
+			unsigned int Right_Profile_ID,
+			unsigned int Type);
 
 void Create_Nav_Profile(unsigned int Profile_ID,
 						unsigned int Start_Speed,
