@@ -7,6 +7,6 @@
 #define 		STARTUP_DELAY_TICKS		30000000
 #define 		TABLE_LENGTH_STEPS		1300
 #define 		TABLE_WIDTH_STEPS		1100
-#define			GRID_STEPS				50
+#define			GRID_STEPS				80
 
 #endif
