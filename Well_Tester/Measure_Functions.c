@@ -62,7 +62,8 @@ ADC10CTL1 |= (cstlog2(Channel) << 12);
 ADC10AE0 = Channel;
 
 //on, interrupts enabled ref 0-2.5V 
-ADC10CTL0 = ADC10SHT_2 | ADC10ON | ADC10IE | REFON | SREF_1 | REF2_5V | MSC; // ADC10ON, interrupt enabled
+//ADC10CTL0 = ADC10SHT_2 | ADC10ON | ADC10IE | REFON | SREF_1 | REF2_5V | MSC; // ADC10ON, interrupt enabled
+ADC10CTL0 = ADC10SHT_2 | ADC10ON | ADC10IE | MSC; // ADC10ON, interrupt enabled
 
 //let reference settle
 __delay_cycles(100);

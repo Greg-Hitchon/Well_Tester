@@ -87,16 +87,69 @@ void main(void) {
   }
   */
   
+
  /*
   //test for ADC values here
- int i = 0;
+
+  //just  test transistor
+
   for(;;){
-    //if(i>(NUM_TEST-1)){
-      //i = 0;
-    //}
-   //ADC_VAL[i++] = Analog_Read(BIT1, 1000);   
-   Print_UINT(Analog_Read(BIT1, 100));
+	  Print_UINT(Analog_Read(BIT5,100));
+	  __delay_cycles(5000000);
+	  Print_String("\r\n");
+	  __delay_cycles(5000000);
+  }
+
+
+ //delay for 30s
+  int i = 0;
+ for (i=0;i<30;i++){
+	 Print_UINT(30-i);
+	 __delay_cycles(11000000);
+	    Print_String("\r\n");
+	    __delay_cycles(5000000);
+ 	 }
+
+ //do test
+ unsigned int Total_Value, Avg_Value;
+ unsigned int Num_Avg = 10;
+  for(;;){
+	  //reset loop vars
+	  Total_Value = 0;
+
+	  //Print_UINT(Analog_Read(BIT1, 100));
+   for(i=0;i<Num_Avg;i++){
+	   Total_Value+=Analog_Read(BIT1, 100);
+   }
+
+   Avg_Value = Total_Value/Num_Avg;
+
+   //print actual number
+   Print_String("Actual Reading: ");
    __delay_cycles(5000000);
+   Print_UINT(Avg_Value);
+   __delay_cycles(5000000);
+   Print_String("\r\n");
+   __delay_cycles(5000000);
+
+   //print choice
+   if(Avg_Value<450){
+	   Print_String("White Vinegar");
+   }
+   else if(Avg_Value<650){
+	   Print_String("Apple Juice");
+   }
+   else if(Avg_Value<780){
+	   Print_String("Sugar Water");
+   }
+   else if(Avg_Value<994){
+	   Print_String("Distilled Water");
+   }
+   else {
+   	   Print_String("Vegetable Oil");
+   }
+
+   //print next line
    Print_String("\r\n");
    __delay_cycles(5000000);
   }
