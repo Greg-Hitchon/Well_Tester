@@ -35,201 +35,252 @@ void Line();
  *THINGS DEPENDENT ON CLOCK FREQUENCY:
  *-certain calculations may need to be adjusted (due to integer division/range issues) if clock freq is increased
  *
+ *
+ *configure for input (high is test, low is run)
  */
-#define NUM_TEST 15
+#define NUM_LIGHT_TEST 10
+#define NUM_COND_TEST 10
+#define NUM_VARIABILITY 10
 
-unsigned long FREQ_VAL[NUM_TEST], ADC_VAL[NUM_TEST];
 bool ub_Extract_Ready = false;
 
 void main(void) {
+	//vars for main
+	bool b_Is_Light = false, b_Is_Volatile = false;
+	unsigned int ui_Run_Mode, Avg_Cond_Value, Avg_Light_Value, i, ui_Last_Cond, ui_Current_Cond, ui_Max_Diff = 0;
 
-  //***************************
-  //CONFIGURATION NONSENSE HERE
-  //***************************
-  WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
+	//***************************
+	//CONFIGURATION NONSENSE HERE
+	//***************************
+	WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
+
+	//set to 1MHZ
+	BCSCTL1 = CALBC1_16MHZ;
+	DCOCTL = CALDCO_16MHZ;
+
+	//delay .25s for settle
+	__delay_cycles(4000000);
+	//____________________________
+
+
+	//***************************
+	//Determine if test or run
+	//***************************
+	//configure for input (high is test, low is run)
+	P2DIR &= ~INPUT_RUN_TYPE;
+	//delay to let settle
+	__delay_cycles(4000000);
+	//test pin
+	if(P2IN & INPUT_RUN_TYPE){
+		ui_Run_Mode = TEST_MODE;
+	}
+	else{
+		ui_Run_Mode = RUN_MODE;
+	}
+	//____________________________
+
+
+	//***************************
+	//Either run TEST MODE or RUN MODE
+	//***************************
+	if(ui_Run_Mode == TEST_MODE){
+		//display test mode
+			for(i=0;i<5;i++){
+				P1DIR |= LED_GREEN;
+				P1OUT ^= LED_GREEN;
+				__delay_cycles(4000000);
+			}
+		//add in a few lines to differentiate
+			Print_String("\r\n\r\n");
+		//delay for 30s
+			for (i=0;i<30;i++){
+				//print countdown
+					Print_UINT(30-i);
+					__delay_cycles(11000000);
+					Print_String("\r\n");
+					__delay_cycles(5000000);
+
+				//update last value 1s before the test begins
+					if(i==(NUM_VARIABILITY-2)){
+						ui_Last_Cond = Analog_Read(INPUT_CONDUCTIVITY, 100);
+					}
+				//only get variability after ~10s
+					if(i>(NUM_VARIABILITY-2)){
+					//get conductivity measurement
+						ui_Current_Cond = Analog_Read(INPUT_CONDUCTIVITY, 100);
+					//save maximum diff between readings
+						if(ui_Current_Cond>ui_Last_Cond){
+							if(ui_Max_Diff<(ui_Current_Cond-ui_Last_Cond)){
+								ui_Max_Diff+=(ui_Current_Cond-ui_Last_Cond);
+							}
+						}
+						else{
+							if(ui_Max_Diff<(ui_Last_Cond-ui_Current_Cond)){
+								ui_Max_Diff+=(ui_Last_Cond-ui_Current_Cond);
+							}
+						}
+					}
+			}
+
+		//test for volatility
+			if(ui_Max_Diff>VOLATILE_THRESHOLD){
+				b_Is_Volatile = true;
+			}
+
+		for(;;){
+		//reset vars
+			Avg_Cond_Value = 0;
+			Avg_Light_Value = 0;
+			b_Is_Light = false;
+
+		//determine conductivity
+			//read analog vals
+				for(i=0;i<NUM_COND_TEST;i++){
+					Avg_Cond_Value+=Analog_Read(INPUT_CONDUCTIVITY, 100);
+				}
+
+				Avg_Cond_Value /= NUM_COND_TEST;
+
+		//determine light dark
+			//read analog vals
+				for(i=0;i<NUM_LIGHT_TEST;i++){
+					Avg_Light_Value+=Analog_Read(INPUT_LIGHT, 100);
+				}
+
+				Avg_Light_Value /= NUM_LIGHT_TEST;
+
+			//set bool based on avg value and threshold
+				if(Avg_Light_Value > LIGHT_THRESHOLD){
+					b_Is_Light = true;
+				}
+
+		//perform logic
+			//print actual readings
+			Print_String("Actual Light Reading: ");
+			__delay_cycles(5000000);
+			Print_UINT(Avg_Light_Value);
+			__delay_cycles(5000000);
+			Print_String("\r\n");
+			__delay_cycles(5000000);
+
+			Print_String("Actual Cond. Reading: ");
+			__delay_cycles(5000000);
+			Print_UINT(Avg_Cond_Value);
+			__delay_cycles(5000000);
+			Print_String("\r\n");
+			__delay_cycles(5000000);
+
+			Print_String("Actual Volatility Reading: ");
+			__delay_cycles(5000000);
+			Print_UINT(ui_Max_Diff);
+			__delay_cycles(5000000);
+			Print_String("\r\n");
+			__delay_cycles(5000000);
+
+			//print choice
+			if((b_Is_Light==false) && (b_Is_Volatile) && (Avg_Cond_Value > 450)){
+				Print_String("Coke");
+			}
+			else if(Avg_Cond_Value<500){
+				if(b_Is_Light){
+					Print_String("White Vinegar");
+				}
+				else{
+					Print_String("Malt Vinegar");
+				}
+			}
+			else if(Avg_Cond_Value<780){
+				if(b_Is_Light){
+					Print_String("Sugar Water");
+				}
+				else{
+					Print_String("Orange Juice");
+				}
+			}
+			else if(Avg_Cond_Value<994){
+				Print_String("Distilled Water");
+			}
+			else {
+				Print_String("Vegetable Oil");
+			}
+
+			//print next line
+			Print_String("\r\n\r\n");
+			__delay_cycles(5000000);
+		}
+	}
+	else{
+		//display run mode
+		for(i=0;i<5;i++){
+			P1DIR |= LED_RED;
+			P1OUT ^= LED_RED;
+			__delay_cycles(4000000);
+		}
+
+		//enable test led
+		P1DIR |= LED_RED | LED_GREEN;
+		//signal ready
+		P1OUT = LED_RED;
+
+		//*******************************
+		//configure startup bit for input
+		P1DIR &= ~BIT_STARTUP;
+		//rising edge trigger
+		P1IES &= ~BIT_STARTUP;
+		//enable interrupt
+		P1IE |= BIT_STARTUP;
+		//*******************************
+
+		//turn off cpu
+		__bis_SR_register(CPUOFF + GIE);
+
+		//turn off startup interrupt and configure as output
+		P1IE &= ~BIT_STARTUP;
+		P1DIR |=BIT_STARTUP;
+
+		//indicate active
+		P1OUT |= LED_GREEN;
+
+		//set up navigation profiles
+		Create_Nav_Profile(0,3250,4500,3250,10,10,1,1);
+
+		//*******************************
+		//set extract bit to input
+		P1DIR &= ~BIT_EXTRACT;
+		//falling edge trigger
+		P1IES |= BIT_EXTRACT;
+		//enable interrupt
+		P1IE |= BIT_EXTRACT;
+		//set global flag
+		ub_Extract_Ready = true;
+		//*******************************
+
+		//***************************
+		//NAVIGATION ALGO HERE
+		//***************************
+		Line();
+		//Square();
+		//Final_Run();
+	}
+	//____________________________
   
-  //set to 1MHZ
-  BCSCTL1 = CALBC1_16MHZ;
-  DCOCTL = CALDCO_16MHZ;
-  
-
-  //outputs clock frequency to p1.4
-  /*
-  P1DIR = BIT4;
-  P1SEL = BIT4;
-
-  while(1){}
-  */
-  
-  
-
-  /*
-  //test for  number to string conversion
-  for (;;){
-    Print_UINT(1000UL);
-    __delay_cycles(5000000);
-  }
-  */
-  
-  /*
-  //test for frequency values here
-  //int i = 0;
-  for(;;){
-    //if(i>(NUM_TEST-1)){
-    //  i = 0;
-    //}
-   //FREQ_VAL[i++] = Frequency_Read(BIT0, 1000);   
-   Print_ULONG(Frequency_Read(BIT0,20000000,20000000,true));
-   __delay_cycles(500000);
-   Print_String("\r\n");
-   __delay_cycles(500000);
- //_BIS_SR(LPM4_bits + GIE);
-  }
-  */
-  
-
- /*
-  //test for ADC values here
-
-  //just  test transistor
-
-  for(;;){
-	  Print_UINT(Analog_Read(BIT5,100));
-	  __delay_cycles(5000000);
-	  Print_String("\r\n");
-	  __delay_cycles(5000000);
-  }
-
-
- //delay for 30s
-  int i = 0;
- for (i=0;i<30;i++){
-	 Print_UINT(30-i);
-	 __delay_cycles(11000000);
-	    Print_String("\r\n");
-	    __delay_cycles(5000000);
- 	 }
-
- //do test
- unsigned int Total_Value, Avg_Value;
- unsigned int Num_Avg = 10;
-  for(;;){
-	  //reset loop vars
-	  Total_Value = 0;
-
-	  //Print_UINT(Analog_Read(BIT1, 100));
-   for(i=0;i<Num_Avg;i++){
-	   Total_Value+=Analog_Read(BIT1, 100);
-   }
-
-   Avg_Value = Total_Value/Num_Avg;
-
-   //print actual number
-   Print_String("Actual Reading: ");
-   __delay_cycles(5000000);
-   Print_UINT(Avg_Value);
-   __delay_cycles(5000000);
-   Print_String("\r\n");
-   __delay_cycles(5000000);
-
-   //print choice
-   if(Avg_Value<450){
-	   Print_String("White Vinegar");
-   }
-   else if(Avg_Value<650){
-	   Print_String("Apple Juice");
-   }
-   else if(Avg_Value<780){
-	   Print_String("Sugar Water");
-   }
-   else if(Avg_Value<994){
-	   Print_String("Distilled Water");
-   }
-   else {
-   	   Print_String("Vegetable Oil");
-   }
-
-   //print next line
-   Print_String("\r\n");
-   __delay_cycles(5000000);
-  }
-  */
-  
-  /*
-  //test for printing here
-  for (;;){  
-    Print_String("\n\n1226!!\r\n\n");
-    __delay_cycles(10000000);
-    Print_String("\n\nHello Greg!!\r\n\n");
-    __delay_cycles(10000000);
-    Print_String("\n\nHello World!!\r\n\n");
-    __delay_cycles(10000000);
-  }
-  */
-	//enable test led
-	P1DIR |= LED_RED | LED_GREEN;
-	//signal ready
-	P1OUT = LED_RED;
-
-	//*******************************
-	//configure startup bit for input
-	P1DIR &= ~BIT_STARTUP;
-	//rising edge trigger
-	P1IES &= ~BIT_STARTUP;
-	//enable interrupt
-	P1IE |= BIT_STARTUP;
-	//*******************************
-
-
-	//Print_String("\n\nWait for start...\r\n\n");
-  
-	//turn off cpu
-	__bis_SR_register(CPUOFF + GIE);
-
-	//turn off startup interrupt and configure as output
-	P1IE &= ~BIT_STARTUP;
-	P1DIR |=BIT_STARTUP;
-
-	//indicate active
-	P1OUT |= LED_GREEN;
-
-	//set up navigation profiles
-	Create_Nav_Profile(0,3250,4500,3250,10,10,1,1);
-	//Create_Nav_Profile(1,3100,3100,3100,10,10,1,1);
-	//Create_Nav_Profile(0,1200,4000,2000,10,10,1,1);
-	//Create_Nav_Profile(1,1200,2000,2000,10,10,1,1);
-
-	//*******************************
-	//set extract bit to input
-	P1DIR &= ~BIT_EXTRACT;
-	//falling edge trigger
-	P1IES |= BIT_EXTRACT;
-	//enable interrupt
-	P1IE |= BIT_EXTRACT;
-	//set global flag
-	ub_Extract_Ready = true;
-	//*******************************
-
-  //***************************
-  //NAVIGATION ALGO HERE
-  //***************************  
-	//Line();
-	//Square();
-	Final_Run();
-  
-  //***************************
-  //Program end
-  //***************************
-  while(1);
+	//***************************
+	//Program end
+	//***************************
+	while(1);
 }
 
 
 void Line()
 {
+	int i_Spd = 3300;
+
 	for(;;){
 		//Stright from start then turn left
+		Create_Nav_Profile(0,i_Spd,i_Spd,i_Spd,10,10,1,1);
 		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
 		__delay_cycles(5000000);
+		//i_Spd +=500;
 	}
 }
 

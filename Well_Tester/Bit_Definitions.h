@@ -47,5 +47,12 @@
 #define SWEEP						(0x1)
 #define DIME						(0x2)
 
+#define INPUT_RUN_TYPE				(0x20)
+#define INPUT_LIGHT					(0x20)
+#define INPUT_CONDUCTIVITY			(0x02)
+
+#define RUN_MODE					(0x1)
+#define TEST_MODE					(0x2)
+
 
 #endif /* BIT_DEFINITIONS_H_ */

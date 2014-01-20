@@ -8,5 +8,8 @@
 #define 		TABLE_LENGTH_STEPS		1300
 #define 		TABLE_WIDTH_STEPS		1100
 #define			GRID_STEPS				80
+#define 		LIGHT_THRESHOLD			700
+#define			VOLATILE_THRESHOLD		50
+
 
 #endif
