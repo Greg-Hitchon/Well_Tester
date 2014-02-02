@@ -16,14 +16,11 @@ void Set_Timer(void);
 void Set_Motor_Outputs(void);
 void Start_Motor(unsigned int Motor_ID);
 void Straight(	unsigned int Direction,
-				unsigned long Left_Steps,
-				unsigned long Right_Steps,
-				unsigned int Left_Profile_ID,
-				unsigned int Right_Profile_ID);
+				unsigned long Steps,
+				unsigned int Profile_ID);
 
 void Turn(	unsigned int Direction,
-			unsigned int Left_Profile_ID,
-			unsigned int Right_Profile_ID,
+			unsigned int Profile_ID,
 			unsigned int Type);
 
 void Create_Nav_Profile(unsigned int Profile_ID,
@@ -37,9 +34,7 @@ void Create_Nav_Profile(unsigned int Profile_ID,
 
 void Set_Motor(	unsigned int Motor_ID,
 				unsigned int Direction,
-				unsigned long Left_Steps,
-				unsigned long Right_Steps,
-				unsigned int Left_Profile_ID,
-				unsigned int Right_Profile_ID);
+				unsigned long Steps,
+				unsigned int Profile_ID);
 
 #endif /* NAV_FUNCTIONS_H_ */

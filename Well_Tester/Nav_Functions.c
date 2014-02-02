@@ -27,17 +27,19 @@ void Clear_State(unsigned int);
 void Save_State(unsigned int);
 void Set_Motor(	unsigned int Motor_ID,
 				unsigned int Direction,
-				unsigned long Left_Steps,
-				unsigned long Right_Steps,
-				unsigned int Left_Profile_ID,
-				unsigned int Right_Profile_ID);
+				unsigned long Steps,
+				unsigned int Profile_ID);
 void Start_Motor(unsigned int Motor_ID);
 void Hold_Until_Finished(void);
+void Update_State(unsigned int);
 
 
 //core preprocessor constants (distance in 0.1mm, frequency in KHz, time is in 1/100(seconds))
 #define NUM_NAV_PROFILES		(1)
 #define MIN_TICK_INCREMENT		(1000)
+#define NUM_STATES				(8)
+#define NUM_OUTPUTS				(4)
+#define NUM_MOTORS				(2)
 
 //secondary (calculated) values
 #define ADJ_CLOCK_FREQ					(((unsigned long) CLOCK_FREQ)*12500UL)
@@ -45,8 +47,12 @@ void Hold_Until_Finished(void);
 //**********************************************************************************************************||
 //constants (calibration and system parameters)
 //**********************************************************************************************************||
-const unsigned int cad_Steps_Per_Sweep[2] = {330, 330};
-const unsigned int cad_Steps_Per_Dime[2] = {174, 174};
+const unsigned int cui_Steps_Per_Sweep = 330;
+const unsigned int cui_Steps_Per_Dime = 174;
+//This configuration implies:
+//Motor 1: a=Bit0, a'=Bit2; b=Bit1, b'=Bit3
+//Motor 2: a=Bit4, a'=Bit6; b=Bit5, b'=Bit7
+const char cch_State_Map[NUM_MOTORS][NUM_STATES] = {{BIT0,BIT3,BIT1,BIT0,BIT2,BIT1,BIT3,BIT2},{BIT4,BIT7,BIT5,BIT4,BIT6,BIT5,BIT7,BIT6}};
 
 //**********************************************************************************************************||
 //**********************************************************************************************************||
@@ -55,9 +61,9 @@ const unsigned int cad_Steps_Per_Dime[2] = {174, 174};
 //Note:  step target is needed because we are counting up not down.  This is for code clarity.
 struct Motor_State {
 	unsigned long Step_Target, Step_Count, Tick_Total;
-    unsigned int Bit_States, Overflows_Remaining, Profile_ID, Num_Leftover, Num_Overflows,
+    unsigned int Direction, Overflows_Remaining, Profile_ID, Num_Leftover, Num_Overflows,
     			Speed, ACC_End, DEC_Start, ACC_Rate, DEC_Rate, ACC_Period, DEC_Period, ACC_Period_Count, DEC_Period_Count;
-	bool Is_Running, Is_Forwards, Is_B, Has_ACC, Has_DEC, Is_Concurrent;
+	bool Is_Running, Has_ACC, Has_DEC, Is_Concurrent;
 };
 
 struct Nav_Profile{
@@ -67,9 +73,12 @@ struct Nav_Profile{
 	bool Has_DEC, Has_ACC;
 };
 
-struct Motor_State s_Cur_Motor_State[2];
+struct Motor_State s_Cur_Motor_State[NUM_MOTORS];
 //struct Motor_State s_Sv_Motor_State[2];
 struct Nav_Profile s_Nav_Profiles[NUM_NAV_PROFILES];
+
+//variables
+unsigned int caui_Last_State[2] ={NUM_STATES+1};
 
 //**********************************************************************************************************||
 //core functions
@@ -79,6 +88,9 @@ struct Nav_Profile s_Nav_Profiles[NUM_NAV_PROFILES];
 //**********************************************************************************************************||
 //**********************************************************************************************************||
 
+
+//this dictates the target steps, speed etc.  This is used as a template to construct the navigation
+//parameters within a specific motor struct.  The values will change dependent on the step count
 void Create_Nav_Profile(unsigned int Profile_ID,
 						unsigned int Start_Speed,
 						unsigned int Target_Speed,
@@ -141,138 +153,114 @@ void Set_Timer(void){
   TA0CTL = TASSEL_2 | MC_2 | ID_3;
 }
 
-void Set_Motor_Outputs(void){
-  //set up output (motor) bits
-  P2DIR |= BIT_ALL_MOTORS;
-  P2OUT &= ~BIT_ALL_MOTORS;
-}
-
 
 //this function sets up the struct used to define running parameters
 void Set_Motor(	unsigned int Motor_ID,
 				unsigned int Direction,
-				unsigned long Left_Steps,
-				unsigned long Right_Steps,
-				unsigned int Left_Profile_ID,
-				unsigned int Right_Profile_ID){
+				unsigned long Steps,
+				unsigned int Profile_ID){
 
-	unsigned int ui_Temp_Target_Speed = 0;
-	unsigned int aui_Steps[2] = {0}, aui_ID[2] = {0};
-	unsigned int i = 0;
-	bool Is_Concurrent = false;
+	unsigned int ui_Temp_Target_Speed = 0, ui_Motor_Index;
 
 	//reset states here as we are not explicitly filling the entire struct
 	Clear_State(Motor_ID);
 
-	//fill a few arrays so we can loop accross left/right motors
-	aui_Steps[LEFT] = Left_Steps;
-	aui_Steps[RIGHT] = Right_Steps;
-
-	aui_ID[LEFT] = Left_Profile_ID;
-	aui_ID[RIGHT] = Right_Profile_ID;
-
-	//if each motor profile id is the same then run concurrently
-	Is_Concurrent = ((Left_Profile_ID == Right_Profile_ID) && (Left_Steps == Right_Steps));
-
-	//even if running concurently need to adjust for direction
-	if (Motor_ID & LEFT_MOTOR){
-		//the "is_forwards" flag is not really necessary but makes code more readable/easy to debug
-		s_Cur_Motor_State[LEFT].Is_Forwards = ((Direction & LEFT_BACKWARD)==0);
-
-		//adjust for backwards bit here (by switching this bit we control motor direction
-		if (s_Cur_Motor_State[LEFT].Is_Forwards == false){
-		   s_Cur_Motor_State[LEFT].Bit_States = BIT_MLB;
-		}
-	}
-
-	if (Motor_ID & RIGHT_MOTOR){
-		//the "is_forwards" flag is not really necessary but makes code more readable/easy to debug
-		s_Cur_Motor_State[RIGHT].Is_Forwards = ((Direction & RIGHT_BACKWARD)==0);
-
-		//adjust for backwards bit here (by switching this bit we control motor direction
-		if (s_Cur_Motor_State[RIGHT].Is_Forwards == false){
-		   s_Cur_Motor_State[RIGHT].Bit_States = BIT_MRB;
-		}
-	}
-
-	//if we are running concurrently then adjust motor_id variable
-	if (Is_Concurrent){
+	//adjust immediately for concurrency
+	if (Motor_ID==BOTH_MOTORS){
+		//NOTE: CHANGING MOTOR ID HERE
 		Motor_ID = CONC_MOTOR;
-		//get total bit state here
-		s_Cur_Motor_State[CONC_MOTOR-1].Bit_States = (s_Cur_Motor_State[LEFT].Bit_States +  s_Cur_Motor_State[RIGHT].Bit_States);
-		//flag concurrent
+	}
+	//get the index value (just id-1)
+	ui_Motor_Index = Motor_ID-1;
+
+	//if motor_id is both then we are going to be running in concurrent mode
+	if(Motor_ID==BOTH_MOTORS){
+		//save directionality
+		s_Cur_Motor_State[ui_Motor_Index].Direction = Direction;
+		//save concurrency bool
 		s_Cur_Motor_State[CONC_MOTOR-1].Is_Concurrent = true;
 	}
-
-	//loop across both motors here, check if need to initialize
-	for (i =0; i<2; i++){
-		if(Motor_ID & (i+1)){
-			//get target here
-			s_Cur_Motor_State[i].Step_Target = aui_Steps[i];
-
-			//bring in info from the nav profile here, this initializes the dynamic counters in the motor struct (not really necessary with no acceleration)
-			s_Cur_Motor_State[i].Overflows_Remaining = s_Nav_Profiles[aui_ID[i]].Num_Overflows;
-			s_Cur_Motor_State[i].Num_Overflows = s_Nav_Profiles[aui_ID[i]].Num_Overflows;
-			s_Cur_Motor_State[i].Num_Leftover = s_Nav_Profiles[aui_ID[i]].Num_Leftover;
-			s_Cur_Motor_State[i].Tick_Total = s_Nav_Profiles[aui_ID[i]].Period;
-
-
-			//**********************************************************************************************************
-			//acceleration nonsense
-			//**********************************************************************************************************
-
-			//here we need to check if the distance is great enough to fit in the acc and dec profiles.
-			//if not we reduce the target speed until possible, note the rates dont change
-			//this is not a perfect solution
-			if ((s_Nav_Profiles[aui_ID[i]].DEC_Steps + s_Nav_Profiles[aui_ID[i]].ACC_Steps) > aui_Steps[i]){
-				//get new speed
-				ui_Temp_Target_Speed = ((aui_Steps[i] +
-					s_Nav_Profiles[aui_ID[i]].Start_Speed/s_Nav_Profiles[aui_ID[i]].ACC_Rate +
-					s_Nav_Profiles[aui_ID[i]].End_Speed/s_Nav_Profiles[aui_ID[i]].DEC_Rate) *
-					(s_Nav_Profiles[aui_ID[i]].ACC_Rate*s_Nav_Profiles[aui_ID[i]].DEC_Rate)) /
-					(s_Nav_Profiles[aui_ID[i]].ACC_Rate + s_Nav_Profiles[aui_ID[i]].DEC_Rate);
-
-				//calculate new step counts
-				if (ui_Temp_Target_Speed > s_Nav_Profiles[aui_ID[i]].Start_Speed){
-					s_Cur_Motor_State[i].ACC_End = ((ui_Temp_Target_Speed-s_Nav_Profiles[aui_ID[i]].Start_Speed)*s_Nav_Profiles[aui_ID[i]].ACC_Period)/s_Nav_Profiles[aui_ID[i]].ACC_Rate;
-				}
-				else{
-					s_Cur_Motor_State[i].ACC_End = 0;
-				}
-
-				if(ui_Temp_Target_Speed > s_Nav_Profiles[aui_ID[i]].End_Speed){
-					s_Cur_Motor_State[i].DEC_Start =  1 + aui_Steps[i] - ((ui_Temp_Target_Speed-s_Nav_Profiles[aui_ID[i]].End_Speed)*s_Nav_Profiles[aui_ID[i]].DEC_Period)/s_Nav_Profiles[aui_ID[i]].DEC_Rate;
-				}
-				else{
-					s_Cur_Motor_State[i].DEC_Start = 0;
-				}
-			}
-			else{
-				s_Cur_Motor_State[i].ACC_End = s_Nav_Profiles[aui_ID[i]].ACC_Steps;
-				s_Cur_Motor_State[i].DEC_Start = 1 + aui_Steps[i] - s_Nav_Profiles[aui_ID[i]].DEC_Steps;
-			}
-
-			//save all necessary values
-			s_Cur_Motor_State[i].ACC_Rate = s_Nav_Profiles[aui_ID[i]].ACC_Rate;
-			s_Cur_Motor_State[i].DEC_Rate = s_Nav_Profiles[aui_ID[i]].DEC_Rate;
-			s_Cur_Motor_State[i].ACC_Period = s_Nav_Profiles[aui_ID[i]].ACC_Period;
-			s_Cur_Motor_State[i].DEC_Period = s_Nav_Profiles[aui_ID[i]].DEC_Period;
-			s_Cur_Motor_State[i].ACC_Period_Count = s_Nav_Profiles[aui_ID[i]].ACC_Period;
-			s_Cur_Motor_State[i].DEC_Period_Count = s_Nav_Profiles[aui_ID[i]].DEC_Period;
-			s_Cur_Motor_State[i].Speed = s_Nav_Profiles[aui_ID[i]].Start_Speed;
-			if(s_Cur_Motor_State[i].ACC_End > 0){
-				s_Cur_Motor_State[i].Has_ACC = true;
-			}
-			if(s_Cur_Motor_State[i].DEC_Start > 0){
-				s_Cur_Motor_State[i].Has_DEC = s_Nav_Profiles[aui_ID[i]].Has_DEC;
-			}
-
-			//initialize running state and set the profile id which determines accel and speed characteristics
-			s_Cur_Motor_State[i].Profile_ID = aui_ID[i];
-			s_Cur_Motor_State[i].Is_Running = true;
-
+	else if (Motor_ID == LEFT_MOTOR){
+		if (Direction == FORWARD){
+			s_Cur_Motor_State[ui_Motor_Index].Direction = LEFT_FORWARD;
+		}
+		else{
+			s_Cur_Motor_State[ui_Motor_Index].Direction = LEFT_BACKWARD;
 		}
 	}
+	else if (Motor_ID == RIGHT_MOTOR){
+		if (Direction == FORWARD){
+			s_Cur_Motor_State[ui_Motor_Index].Direction = RIGHT_FORWARD;
+		}
+		else{
+			s_Cur_Motor_State[ui_Motor_Index].Direction = RIGHT_BACKWARD;
+		}
+	}
+
+
+	//get target steps here
+	s_Cur_Motor_State[ui_Motor_Index].Step_Target = Steps;
+
+	//bring in info from the nav profile here, this initializes the dynamic counters in the motor struct (not really necessary with no acceleration)
+	s_Cur_Motor_State[ui_Motor_Index].Overflows_Remaining = s_Nav_Profiles[Profile_ID].Num_Overflows;
+	s_Cur_Motor_State[ui_Motor_Index].Num_Overflows = s_Nav_Profiles[Profile_ID].Num_Overflows;
+	s_Cur_Motor_State[ui_Motor_Index].Num_Leftover = s_Nav_Profiles[Profile_ID].Num_Leftover;
+	s_Cur_Motor_State[ui_Motor_Index].Tick_Total = s_Nav_Profiles[Profile_ID].Period;
+
+
+	//**********************************************************************************************************
+	//acceleration nonsense
+	//**********************************************************************************************************
+
+	//here we need to check if the distance is great enough to fit in the acc and dec profiles.
+	//if not we reduce the target speed until possible, note the rates dont change
+	//this is not a perfect solution
+	if ((s_Nav_Profiles[Profile_ID].DEC_Steps + s_Nav_Profiles[Profile_ID].ACC_Steps) > Steps){
+		//get new speed
+		ui_Temp_Target_Speed = ((Steps +
+			s_Nav_Profiles[Profile_ID].Start_Speed/s_Nav_Profiles[Profile_ID].ACC_Rate +
+			s_Nav_Profiles[Profile_ID].End_Speed/s_Nav_Profiles[Profile_ID].DEC_Rate) *
+			(s_Nav_Profiles[Profile_ID].ACC_Rate*s_Nav_Profiles[Profile_ID].DEC_Rate)) /
+			(s_Nav_Profiles[Profile_ID].ACC_Rate + s_Nav_Profiles[Profile_ID].DEC_Rate);
+
+		//calculate new step counts
+		if (ui_Temp_Target_Speed > s_Nav_Profiles[Profile_ID].Start_Speed){
+			s_Cur_Motor_State[ui_Motor_Index].ACC_End = ((ui_Temp_Target_Speed-s_Nav_Profiles[Profile_ID].Start_Speed)*s_Nav_Profiles[Profile_ID].ACC_Period)/s_Nav_Profiles[Profile_ID].ACC_Rate;
+		}
+		else{
+			s_Cur_Motor_State[ui_Motor_Index].ACC_End = 0;
+		}
+
+		if(ui_Temp_Target_Speed > s_Nav_Profiles[Profile_ID].End_Speed){
+			s_Cur_Motor_State[ui_Motor_Index].DEC_Start =  1 + Steps - ((ui_Temp_Target_Speed-s_Nav_Profiles[Profile_ID].End_Speed)*s_Nav_Profiles[Profile_ID].DEC_Period)/s_Nav_Profiles[Profile_ID].DEC_Rate;
+		}
+		else{
+			s_Cur_Motor_State[ui_Motor_Index].DEC_Start = 0;
+		}
+	}
+	else{
+		s_Cur_Motor_State[ui_Motor_Index].ACC_End = s_Nav_Profiles[Profile_ID].ACC_Steps;
+		s_Cur_Motor_State[ui_Motor_Index].DEC_Start = 1 + Steps - s_Nav_Profiles[Profile_ID].DEC_Steps;
+	}
+
+	//save all necessary values
+	s_Cur_Motor_State[ui_Motor_Index].ACC_Rate = s_Nav_Profiles[Profile_ID].ACC_Rate;
+	s_Cur_Motor_State[ui_Motor_Index].DEC_Rate = s_Nav_Profiles[Profile_ID].DEC_Rate;
+	s_Cur_Motor_State[ui_Motor_Index].ACC_Period = s_Nav_Profiles[Profile_ID].ACC_Period;
+	s_Cur_Motor_State[ui_Motor_Index].DEC_Period = s_Nav_Profiles[Profile_ID].DEC_Period;
+	s_Cur_Motor_State[ui_Motor_Index].ACC_Period_Count = s_Nav_Profiles[Profile_ID].ACC_Period;
+	s_Cur_Motor_State[ui_Motor_Index].DEC_Period_Count = s_Nav_Profiles[Profile_ID].DEC_Period;
+	s_Cur_Motor_State[ui_Motor_Index].Speed = s_Nav_Profiles[Profile_ID].Start_Speed;
+	if(s_Cur_Motor_State[ui_Motor_Index].ACC_End > 0){
+		s_Cur_Motor_State[ui_Motor_Index].Has_ACC = true;
+	}
+	if(s_Cur_Motor_State[ui_Motor_Index].DEC_Start > 0){
+		s_Cur_Motor_State[ui_Motor_Index].Has_DEC = s_Nav_Profiles[Profile_ID].Has_DEC;
+	}
+
+	//initialize running state and set the profile id which determines accel and speed characteristics
+	s_Cur_Motor_State[ui_Motor_Index].Profile_ID = Profile_ID;
+	s_Cur_Motor_State[ui_Motor_Index].Is_Running = true;
 }
 
 
@@ -314,13 +302,28 @@ void Restore_State(unsigned int Motor_ID){
 }
 */
 
+void Update_State(unsigned int Motor_ID){
+	unsigned int i, Bit_Total = 0;
+
+	for (i=0;i<NUM_MOTORS;i++){
+		if(Motor_ID & (i+1)){
+			//cycle through 0-7
+			if(++caui_Last_State[i] > (NUM_STATES-1)){
+				caui_Last_State[i] = 0;
+			}
+			//add to bit total
+			Bit_Total += cch_State_Map[i][caui_Last_State[i]];
+		}
+	}
+
+	//update motor state
+	P2OUT ^= Bit_Total;
+}
+
 //before the motors run (and after the running structs have been populated) we need to initialize a few ports/states
 void Start_Motor(unsigned int Motor_ID){
-	//make sure we are starting with a blank slate here
-	Set_Motor_Outputs();
-
 	//check for concurrent here
-	if (s_Cur_Motor_State[CONC_MOTOR-1].Is_Concurrent){
+	if ((Motor_ID & CONC_MOTOR) && (s_Cur_Motor_State[CONC_MOTOR-1].Is_Concurrent)){
 		Motor_ID = CONC_MOTOR;
 	}
 
@@ -329,14 +332,12 @@ void Start_Motor(unsigned int Motor_ID){
 
 	//here we set the bit states specified by the "settings" struct
 	if (Motor_ID & LEFT_MOTOR){
-		P2OUT |= s_Cur_Motor_State[LEFT].Bit_States;
 		TA0CCR1 = s_Cur_Motor_State[LEFT].Num_Leftover;
 		//start interrupts
 		TA0CCTL1 |= CCIE;
 	}
 
 	if (Motor_ID & RIGHT_MOTOR){
-		P2OUT |= s_Cur_Motor_State[RIGHT].Bit_States;
 		TA0CCR2 = s_Cur_Motor_State[RIGHT].Num_Leftover;
 		//start interrupts
 		TA0CCTL2 |= CCIE;
@@ -358,20 +359,19 @@ void Hold_Until_Finished(void){
 //**********************************************************************************************************||
 
 void Turn(	unsigned int Direction,
-			unsigned int Left_Profile_ID,
-			unsigned int Right_Profile_ID,
+			unsigned int Profile_ID,
 			unsigned int Type){
 
 
 	if(Type == SWEEP){
 	//actually set motors
 		if(Direction == LEFT){
-			Set_Motor(RIGHT_MOTOR,FORWARD, 0, cad_Steps_Per_Sweep[RIGHT], 0, Right_Profile_ID);
+			Set_Motor(RIGHT_MOTOR,FORWARD, cui_Steps_Per_Sweep, Profile_ID);
 			Start_Motor(RIGHT_MOTOR);
 			Hold_Until_Finished();
 		}
 		else{
-			Set_Motor(LEFT_MOTOR,FORWARD, cad_Steps_Per_Sweep[LEFT],0, Left_Profile_ID, 0);
+			Set_Motor(LEFT_MOTOR,FORWARD, cui_Steps_Per_Sweep, Profile_ID);
 			Start_Motor(LEFT_MOTOR);
 			Hold_Until_Finished();
 		}
@@ -379,12 +379,12 @@ void Turn(	unsigned int Direction,
 	else{
 		//actually set motors
 		if(Direction == LEFT){
-			Set_Motor(BOTH_MOTORS,TURN_LEFT,cad_Steps_Per_Dime[LEFT], cad_Steps_Per_Dime[RIGHT], Left_Profile_ID, Right_Profile_ID);
+			Set_Motor(BOTH_MOTORS,TURN_LEFT,cui_Steps_Per_Dime, Profile_ID);
 			Start_Motor(BOTH_MOTORS);
 			Hold_Until_Finished();
 		}
 		else{
-			Set_Motor(BOTH_MOTORS,TURN_RIGHT,cad_Steps_Per_Dime[RIGHT], cad_Steps_Per_Dime[LEFT], Left_Profile_ID, Right_Profile_ID);
+			Set_Motor(BOTH_MOTORS,TURN_RIGHT,cui_Steps_Per_Dime, Profile_ID);
 			Start_Motor(BOTH_MOTORS);
 			Hold_Until_Finished();
 		}
@@ -392,19 +392,17 @@ void Turn(	unsigned int Direction,
 }
 
 void Straight(	unsigned int Direction,
-				unsigned long Left_Steps,
-				unsigned long Right_Steps,
-				unsigned int Left_Profile_ID,
-				unsigned int Right_Profile_ID){
+				unsigned long Steps,
+				unsigned int Profile_ID){
 
 	//actually set motors
 	if (Direction == FORWARD){
-		Set_Motor(BOTH_MOTORS,BOTH_FORWARD,Left_Steps, Right_Steps, Left_Profile_ID, Right_Profile_ID);
+		Set_Motor(BOTH_MOTORS,BOTH_FORWARD,Steps,Profile_ID);
 		Start_Motor(BOTH_MOTORS);
 		Hold_Until_Finished();
 	}
 	else{
-		Set_Motor(BOTH_MOTORS,BOTH_BACKWARD,Left_Steps, Right_Steps, Left_Profile_ID, Right_Profile_ID);
+		Set_Motor(BOTH_MOTORS,BOTH_BACKWARD,Steps,Profile_ID);
 		Start_Motor(BOTH_MOTORS);
 		Hold_Until_Finished();
 	}
@@ -429,7 +427,7 @@ __interrupt void TIMER0_CCRO_ISR(void){
 #pragma vector=TIMER0_A1_VECTOR
 __interrupt void TIMER0_OTHER_ISR(void){
 	//bit flag
-	unsigned int ui_Bit_Flag_A, ui_Bit_Flag_B, ui_Motor_Index;
+	unsigned int ui_Motor_Index;
 	bool b_Do_Update = false;
 
 	//flags reset by reading ta0iv
@@ -437,36 +435,14 @@ __interrupt void TIMER0_OTHER_ISR(void){
 	case TA0IV_TACCR1:
 		//flag update needed
 		b_Do_Update = true;
-
-		//get relevant bit states
-		if(s_Cur_Motor_State[LEFT].Is_Concurrent){
-			ui_Bit_Flag_A = (BIT_MLA | BIT_MRA);
-			ui_Bit_Flag_B = (BIT_MLB | BIT_MRB);
-		}
-		else{
-			ui_Bit_Flag_A = BIT_MLA;
-			ui_Bit_Flag_B = BIT_MLB;
-		}
-
-		//assign index as left motor
+		//assign index
 		ui_Motor_Index = LEFT;
 
 		break;
 	case TA0IV_TACCR2:
 		//flag update needed
 		b_Do_Update = true;
-
-		//get relevant bit states
-		if(s_Cur_Motor_State[RIGHT].Is_Concurrent){
-			ui_Bit_Flag_A = BIT_MLA + BIT_MRA;
-			ui_Bit_Flag_B = BIT_MLB + BIT_MRB;
-		}
-		else{
-			ui_Bit_Flag_A = BIT_MRA;
-			ui_Bit_Flag_B = BIT_MRB;
-		}
-
-		//assign index as left motor
+		//assign index
 		ui_Motor_Index = RIGHT;
 	default: break;
 	}
@@ -480,15 +456,14 @@ __interrupt void TIMER0_OTHER_ISR(void){
 				//increment step counter
 				s_Cur_Motor_State[ui_Motor_Index].Step_Count++;
 
-				//this keeps track of a or b using a bool in the motor struct
-				if (s_Cur_Motor_State[ui_Motor_Index].Is_B){
-					P2OUT ^= ui_Bit_Flag_B;
-					s_Cur_Motor_State[ui_Motor_Index].Is_B = false;
+				//actually update pins here
+				if(s_Cur_Motor_State[ui_Motor_Index].Is_Concurrent){
+					Update_State(BOTH_MOTORS);
 				}
 				else{
-					P2OUT ^= ui_Bit_Flag_A;
-					s_Cur_Motor_State[ui_Motor_Index].Is_B = true;
+					Update_State(ui_Motor_Index+1);
 				}
+
 
 				//update period here if necessary
 				if ((s_Cur_Motor_State[ui_Motor_Index].Has_ACC) &&
@@ -549,20 +524,24 @@ __interrupt void TIMER0_OTHER_ISR(void){
 				}
 			}
 			else{
-				//turn off interrupts
-				if(ui_Motor_Index == LEFT){
-					TA0CCTL1 &= ~CCIE;
-				}
-				else{
-					TA0CCTL2 &= ~CCIE;
-				}
 
 				if(s_Cur_Motor_State[ui_Motor_Index].Is_Concurrent){
+					//turn off both interrupts
+					TA0CCTL1 &= ~CCIE;
+					TA0CCTL2 &= ~CCIE;
+					//reset motor struct
 					Clear_State(BOTH_MOTORS);
 				}
 				else{
-					//never save the state when the motor exits naturally
+					//reset motor struct
 					Clear_State(ui_Motor_Index + 1);
+					//turn off interrupts
+					if(ui_Motor_Index == LEFT){
+						TA0CCTL1 &= ~CCIE;
+					}
+					else{
+						TA0CCTL2 &= ~CCIE;
+					}
 				}
 
 
