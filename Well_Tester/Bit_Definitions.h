@@ -55,5 +55,10 @@
 #define RUN_MODE					(0x1)
 #define TEST_MODE					(0x2)
 
+#define NORTH						(0x1)
+#define EAST						(0x2)
+#define SOUTH						(0x4)
+#define WEST						(0x8)
+
 
 #endif /* BIT_DEFINITIONS_H_ */

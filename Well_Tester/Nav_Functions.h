@@ -10,6 +10,7 @@
 #ifndef NAV_FUNCTIONS_H_
 #define NAV_FUNCTIONS_H_
 
+__interrupt void PORT1_ISR(void);
 __interrupt void TIMER0_OTHER_ISR(void);
 void Restore_State(unsigned int Motor_ID);
 void Set_Timer(void);
@@ -38,5 +39,10 @@ void Set_Motor(	unsigned int Motor_ID,
 				unsigned int Profile_ID);
 
 void Initialize_Bits(void);
+void Initialize_Tracking(void);
+void Go_Home(void);
+void Set_Up_Extraction(void);
+void Wait_For_Startup(void);
+void Update_XY_Coords(unsigned long Steps, unsigned int Direction);
 
 #endif /* NAV_FUNCTIONS_H_ */

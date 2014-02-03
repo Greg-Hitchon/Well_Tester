@@ -30,6 +30,10 @@ void Setup_Comms(void)
   UCA0CTL1 &= ~UCSWRST;                                 // **Initialize USCI state machine**
 }
 
+
+void Output_Result(void){
+	__delay_cycles(16000000);
+}
   //char *c_Tst1;
 void Print_UINT(unsigned int Value){
 

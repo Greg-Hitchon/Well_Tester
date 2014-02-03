@@ -4,6 +4,7 @@
  *  Created on: Oct 20, 2013
  *      Author: Greg
  */
+#include "cstbool.h"
 
 #ifndef MEASURE_FUNCTIONS_H_
 #define MEASURE_FUNCTIONS_H_
@@ -15,6 +16,8 @@ unsigned long Frequency_Read(unsigned int Channel,
                             unsigned long Max_Input_Count,
                             unsigned long Max_Clock_Count,
                             bool Return_Total);
+
+void Get_Result(void);
 
                 
 #endif /* MEASURE_FUNCTIONS_H_ */

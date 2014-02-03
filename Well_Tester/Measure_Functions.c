@@ -31,6 +31,11 @@ void Discharge_Cap(unsigned int);
 unsigned long gul_Tick_Count, gul_ADC_Total, gul_Freq_Target, gul_Freq_Count, gul_Max_Ticks;
 unsigned int gui_Channel, gui_ADC_Count, gui_ADC_Target;
    
+
+void Get_Result(void){
+	__delay_cycles(16000000);
+}
+
 //Analog_Read performs much like the "Arduino" version with a 10-bit digital 
 //value being returned that is scaled to 0-2.5V on a given port
    //NOTE:  internal reference does not seem to be perfect 2.5V so some adjustment is required for accurate performance, temperature dependent

@@ -20,6 +20,9 @@
 
 //user defined headers
 #include "Bit_Definitions.h"
+#include "Extraction_Functions.h"
+#include "Measure_Functions.h"
+#include "Communication_Functions.h"
 #include "cstbool.h"
 
 //function prototypes
@@ -32,6 +35,8 @@ void Set_Motor(	unsigned int Motor_ID,
 void Start_Motor(unsigned int Motor_ID);
 void Hold_Until_Finished(void);
 void Update_State(unsigned int);
+void Go_Home(void);
+void Update_XY_Coords(unsigned long, unsigned int);
 
 
 //core preprocessor constants (distance in 0.1mm, frequency in KHz, time is in 1/100(seconds))
@@ -39,6 +44,8 @@ void Update_State(unsigned int);
 #define MIN_TICK_INCREMENT		(1000)
 #define NUM_STATES				(8)
 #define NUM_MOTORS				(2)
+#define NUM_ADJUST_STEPS		(25)
+
 
 //secondary (calculated) values
 #define ADJ_CLOCK_FREQ					(((unsigned long) CLOCK_FREQ)*12500UL)
@@ -47,7 +54,7 @@ void Update_State(unsigned int);
 //constants (calibration and system parameters)
 //**********************************************************************************************************||
 const unsigned int cui_Steps_Per_Sweep = 660;
-const unsigned int cui_Steps_Per_Dime = 348;
+const unsigned int cui_Steps_Per_Dime = 335;
 //This configuration implies:
 //Motor 1: a=Bit0, a'=Bit2; b=Bit1, b'=Bit3
 //Motor 2: a=Bit4, a'=Bit6; b=Bit5, b'=Bit7
@@ -79,7 +86,9 @@ struct Nav_Profile s_Nav_Profiles[NUM_NAV_PROFILES];
 
 //variables
 unsigned int caui_Last_State[2] ={NUM_STATES+1};
-unsigned int caui_State_Direction[2]={FORWARD};
+unsigned int caui_State_Direction[2]={FORWARD}, caui_Orientation[4]={NORTH,EAST,SOUTH,WEST};
+unsigned int cui_X_Steps, cui_Y_Steps, cui_Orientation_Index;
+bool cub_Extract_Ready = false, cub_Can_Go_Home = false, cub_Cup_Found = false;
 
 //**********************************************************************************************************||
 //core functions
@@ -89,6 +98,49 @@ unsigned int caui_State_Direction[2]={FORWARD};
 //**********************************************************************************************************||
 //**********************************************************************************************************||
 
+//this is just another step in the initialization, split up just for modularity
+void Set_Up_Extraction(void){
+	//*******************************
+	//set extract bit to input
+	P1DIR &= ~BIT_EXTRACT;
+	//falling edge trigger
+	P1IES |= BIT_EXTRACT;
+	//enable interrupt
+	P1IE |= BIT_EXTRACT;
+	//set global flag
+	cub_Extract_Ready = true;
+	//*******************************
+}
+
+//just waits for a startup on some port 1 pin
+void Wait_For_Startup(void){
+	//*******************************
+	//configure startup bit for input
+	P1DIR &= ~BIT_STARTUP;
+	//rising edge trigger
+	P1IES &= ~BIT_STARTUP;
+	//enable interrupt
+	P1IE |= BIT_STARTUP;
+	//*******************************
+
+	//turn off cpu
+	__bis_SR_register(CPUOFF + GIE);
+
+	//turn off startup interrupt and configure as output
+	P1IE &= ~BIT_STARTUP;
+	P1DIR |=BIT_STARTUP;
+}
+
+//origin is at finish line with x axis across to start
+//north is along positive y axis, east along positive x axis
+void Initialize_Tracking(void){
+	//set initial x and y coords
+	cui_X_Steps = TABLE_WIDTH_STEPS;
+	cui_Y_Steps = 0;
+
+	//set initial orientation
+	cui_Orientation_Index = 0;
+}
 
 //sets the state to 0 state
 void Initialize_Bits(void){
@@ -99,8 +151,7 @@ void Initialize_Bits(void){
 	//update motor pins
 	P2DIR |= 0xFF;
 	P2SEL = 0x0;
-	P2IN &= ~0xFF;
-	P2IFG = 0x0;
+
 	//for each motor we need to set bits to the initial 0 state
 	P2OUT = BIT0 | BIT3 | BIT4 | BIT7;
 }
@@ -414,7 +465,8 @@ void Hold_Until_Finished(void){
 void Turn(	unsigned int Direction,
 			unsigned int Profile_ID,
 			unsigned int Type){
-
+	//cant break out of a turn
+	cub_Can_Go_Home = false;
 
 	if(Type == SWEEP){
 	//actually set motors
@@ -442,11 +494,37 @@ void Turn(	unsigned int Direction,
 			Hold_Until_Finished();
 		}
 	}
+
+	//adjust the orientation
+	if(Direction == LEFT){
+		if(cui_Orientation_Index == 0){
+			cui_Orientation_Index = 3;
+		}
+		else{
+			cui_Orientation_Index--;
+		}
+	}
+	else{
+		if(cui_Orientation_Index == 3){
+			cui_Orientation_Index = 0;
+		}
+		else{
+			cui_Orientation_Index++;
+		}
+	}
+
+	//check if can go home after turn is done
+	if(cub_Cup_Found){
+		Go_Home();
+	}
+
 }
 
 void Straight(	unsigned int Direction,
 				unsigned long Steps,
 				unsigned int Profile_ID){
+	//can break out of a straigt line
+	cub_Can_Go_Home = true;
 
 	//actually set motors
 	if (Direction == FORWARD){
@@ -458,6 +536,134 @@ void Straight(	unsigned int Direction,
 		Set_Motor(BOTH_MOTORS,BOTH_BACKWARD,Steps,Profile_ID);
 		Start_Motor(BOTH_MOTORS);
 		Hold_Until_Finished();
+	}
+
+	//reset just in case
+	cub_Can_Go_Home = false;
+
+	//update the coords
+	Update_XY_Coords(Steps, Direction);
+}
+
+void Update_XY_Coords(unsigned long Steps, unsigned int Direction){
+
+	if(Direction == FORWARD){
+		//adjust the coords based on steps taken in current movement
+		switch (caui_Orientation[cui_Orientation_Index]){
+		case NORTH:
+			cui_Y_Steps += Steps;
+			break;
+		case EAST:
+			cui_X_Steps += Steps;
+			break;
+		case SOUTH:
+			cui_Y_Steps -= Steps;
+			break;
+		case WEST:
+			cui_X_Steps -= Steps;
+		}
+	}
+	else if (Direction == BACKWARD){
+		//adjust the coords based on steps taken in current movement
+		switch (caui_Orientation[cui_Orientation_Index]){
+		case NORTH:
+			cui_Y_Steps -= Steps;
+			break;
+		case EAST:
+			cui_X_Steps -= Steps;
+			break;
+		case SOUTH:
+			cui_Y_Steps += Steps;
+			break;
+		case WEST:
+			cui_X_Steps += Steps;
+		}
+	}
+}
+
+
+//this just goes hoem based on direction and coordinates
+void Go_Home(void){
+	//change to false to prevent recursion
+	cub_Cup_Found = false;
+
+	//reorient
+	switch(caui_Orientation[cui_Orientation_Index]){
+	case NORTH:
+		//get to x direction
+		Turn(LEFT,0,DIME);
+		//do x translation
+		Straight(FORWARD,cui_X_Steps,0);
+
+		//get to y direction
+		Turn(LEFT,0,DIME);
+		//do y translation
+		Straight(FORWARD,cui_Y_Steps,0);
+
+		//get result from sensing unit
+		Get_Result();
+		//print to computer
+		Output_Result();
+		//infinite loop
+		__disable_interrupt();
+		for(;;){};
+		break;
+	case EAST:
+		//get to y direction
+		Turn(RIGHT,0,DIME);
+		//do y translation
+		Straight(FORWARD,cui_Y_Steps,0);
+
+		//get to x direction
+		Turn(RIGHT,0,DIME);
+		//do x translation
+		Straight(FORWARD, cui_X_Steps,0);
+
+		//get result from sensing unit
+		Get_Result();
+		//print to computer
+		Output_Result();
+		//infinite loop
+		__disable_interrupt();
+		for(;;){};
+		break;
+	case SOUTH:
+		//do y translation
+		Straight(FORWARD,cui_Y_Steps,0);
+
+		if(cui_X_Steps > 0){
+			//get to x direction
+			Turn(RIGHT,0,DIME);
+			//do x translation
+			Straight(FORWARD, cui_X_Steps,0);
+		}
+
+		//get result from sensing unit
+		Get_Result();
+		//print to computer
+		Output_Result();
+		//infinite loop
+		__disable_interrupt();
+		for(;;){};
+		break;
+	case WEST:
+		//do x translation
+		Straight(FORWARD,cui_X_Steps,0);
+
+		if(cui_Y_Steps>0){
+			//get to y direction
+			Turn(LEFT,0,DIME);
+			//do y translation
+			Straight(FORWARD, cui_Y_Steps,0);
+		}
+
+		//get result from sensing unit
+		Get_Result();
+		//print to computer
+		Output_Result();
+		//infinite loop
+		__disable_interrupt();
+		for(;;){};
 	}
 }
 
@@ -473,6 +679,45 @@ void Straight(	unsigned int Direction,
 __interrupt void TIMER0_CCRO_ISR(void){
 	//interrupt flags are reset automatically
 	__no_operation();
+}
+
+//all port 1 interrupts, controls startup and cup locating
+#pragma vector=PORT1_VECTOR
+__interrupt void PORT1_ISR(void){
+
+	if((P1IFG & BIT_EXTRACT) && cub_Extract_Ready){
+		//disable interrupt
+		P1IE &= ~BIT_EXTRACT;
+
+		//flag cup found
+		cub_Cup_Found = true;
+
+		//DO EXTRACTION ALGO
+		Extract_Liquid();
+
+		//check if can interrupt
+		if(cub_Can_Go_Home){
+			//update before going home
+			if(s_Cur_Motor_State[CONC_MOTOR-1].Direction & LEFT_FORWARD){
+				Update_XY_Coords(s_Cur_Motor_State[CONC_MOTOR-1].Step_Count,FORWARD);
+			}
+			else{
+				Update_XY_Coords(s_Cur_Motor_State[CONC_MOTOR-1].Step_Count,BACKWARD);
+			}
+			//after adjustment we can just go home
+			Go_Home();
+
+		}
+	  }
+	  else if(P1IFG & BIT_STARTUP){
+		  //Print_String("\n\nStarting Program Execution...\r\n\n");
+		  P1OUT &= ~LED_RED;
+		  __delay_cycles(STARTUP_DELAY_TICKS);
+		  __bic_SR_register_on_exit(CPUOFF);
+	  }
+
+	  //clear fgs
+	  P1IFG = 0x0;
 }
 
 //clear flag here, also updates the motors
