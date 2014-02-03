@@ -44,17 +44,20 @@ void Update_XY_Coords(unsigned long, unsigned int);
 #define MIN_TICK_INCREMENT		(1000)
 #define NUM_STATES				(8)
 #define NUM_MOTORS				(2)
-#define NUM_ADJUST_STEPS		(25)
+#define STEPS_PER_SWEEP 		(665)
+#define STEPS_PER_DIME 			(335)
+#define STEPS_Y_ADJUST			(150)
 
 
 //secondary (calculated) values
-#define ADJ_CLOCK_FREQ					(((unsigned long) CLOCK_FREQ)*12500UL)
-
+#define ADJ_CLOCK_FREQ			(((unsigned long) CLOCK_FREQ)*12500UL)
+//this should be equal to STEPS_PER_SWEEP/PI
+#define STEPS_XY_PER_SWEEP		(230)
 //**********************************************************************************************************||
 //constants (calibration and system parameters)
 //**********************************************************************************************************||
-const unsigned int cui_Steps_Per_Sweep = 660;
-const unsigned int cui_Steps_Per_Dime = 335;
+
+
 //This configuration implies:
 //Motor 1: a=Bit0, a'=Bit2; b=Bit1, b'=Bit3
 //Motor 2: a=Bit4, a'=Bit6; b=Bit5, b'=Bit7
@@ -135,7 +138,7 @@ void Wait_For_Startup(void){
 //north is along positive y axis, east along positive x axis
 void Initialize_Tracking(void){
 	//set initial x and y coords
-	cui_X_Steps = TABLE_WIDTH_STEPS;
+	cui_X_Steps = TABLE_WIDTH_STEPS + 2*STEPS_XY_PER_SWEEP;
 	cui_Y_Steps = 0;
 
 	//set initial orientation
@@ -342,32 +345,6 @@ void Clear_State(unsigned int Motor_ID){
 	}
 }
 
-/*
-//copies over the specified structure to the save motor array
-void Save_State(unsigned int Motor_ID){
-	if (Motor_ID & LEFT_MOTOR){
-		s_Sv_Motor_State[LEFT] = s_Cur_Motor_State[LEFT];
-        s_Sv_Motor_State[LEFT].Bit_States = (P2OUT & BIT_LEFT_MOTOR);
-	}
-
-	if (Motor_ID & RIGHT_MOTOR){
-		s_Sv_Motor_State[RIGHT] = s_Cur_Motor_State[RIGHT];
-        s_Sv_Motor_State[RIGHT].Bit_States = (P2OUT & BIT_RIGHT_MOTOR);
-	}
-}
-
-//copies the saved structure back to the running structures
-void Restore_State(unsigned int Motor_ID){
-  if (Motor_ID & LEFT_MOTOR){
-    s_Cur_Motor_State[LEFT] = s_Sv_Motor_State[LEFT];
-  }
-
-  if (Motor_ID & RIGHT_MOTOR){
-    s_Cur_Motor_State[RIGHT] = s_Sv_Motor_State[RIGHT];
-  }
-}
-*/
-
 //updates bits, takes either motor or both
 void Update_State(unsigned int Motor_Index){
 	unsigned int Bit_Total = 0, i, Motor_ID;
@@ -469,14 +446,17 @@ void Turn(	unsigned int Direction,
 	cub_Can_Go_Home = false;
 
 	if(Type == SWEEP){
-	//actually set motors
+		//because we cant go home in middle of execution can update x/y before actual movement
+		Update_XY_Coords(STEPS_XY_PER_SWEEP, FORWARD);
+
+		//actually set motors
 		if(Direction == LEFT){
-			Set_Motor(RIGHT_MOTOR, FORWARD, cui_Steps_Per_Sweep, Profile_ID);
+			Set_Motor(RIGHT_MOTOR, FORWARD, STEPS_PER_SWEEP, Profile_ID);
 			Start_Motor(RIGHT_MOTOR);
 			Hold_Until_Finished();
 		}
 		else{
-			Set_Motor(LEFT_MOTOR, FORWARD, cui_Steps_Per_Sweep, Profile_ID);
+			Set_Motor(LEFT_MOTOR, FORWARD, STEPS_PER_SWEEP, Profile_ID);
 			Start_Motor(LEFT_MOTOR);
 			Hold_Until_Finished();
 		}
@@ -484,12 +464,12 @@ void Turn(	unsigned int Direction,
 	else{
 		//actually set motors
 		if(Direction == LEFT){
-			Set_Motor(BOTH_MOTORS,TURN_LEFT,cui_Steps_Per_Dime, Profile_ID);
+			Set_Motor(BOTH_MOTORS,TURN_LEFT,STEPS_PER_DIME, Profile_ID);
 			Start_Motor(BOTH_MOTORS);
 			Hold_Until_Finished();
 		}
 		else{
-			Set_Motor(BOTH_MOTORS,TURN_RIGHT,cui_Steps_Per_Dime, Profile_ID);
+			Set_Motor(BOTH_MOTORS,TURN_RIGHT,STEPS_PER_DIME, Profile_ID);
 			Start_Motor(BOTH_MOTORS);
 			Hold_Until_Finished();
 		}
@@ -511,6 +491,12 @@ void Turn(	unsigned int Direction,
 		else{
 			cui_Orientation_Index++;
 		}
+	}
+
+	//a little messy but if we are doing a sweep we need to update xy again after orientation update as it moves in both x and y
+	if(Type == SWEEP){
+		//because we cant go home in middle of execution can update x/y before actual movement
+		Update_XY_Coords(STEPS_XY_PER_SWEEP, FORWARD);
 	}
 
 	//check if can go home after turn is done
@@ -557,20 +543,40 @@ void Update_XY_Coords(unsigned long Steps, unsigned int Direction){
 			cui_X_Steps += Steps;
 			break;
 		case SOUTH:
-			cui_Y_Steps -= Steps;
+			if(cui_Y_Steps >= Steps){
+				cui_Y_Steps -= Steps;
+			}
+			else{
+				cui_Y_Steps = 0;
+			}
 			break;
 		case WEST:
-			cui_X_Steps -= Steps;
+			if(cui_X_Steps >= Steps){
+				cui_X_Steps -= Steps;
+			}
+			else{
+				cui_X_Steps = 0;
+			}
 		}
 	}
 	else if (Direction == BACKWARD){
 		//adjust the coords based on steps taken in current movement
 		switch (caui_Orientation[cui_Orientation_Index]){
 		case NORTH:
-			cui_Y_Steps -= Steps;
+			if(cui_Y_Steps >= Steps){
+				cui_Y_Steps -= Steps;
+			}
+			else{
+				cui_Y_Steps = 0;
+			}
 			break;
 		case EAST:
-			cui_X_Steps -= Steps;
+			if(cui_X_Steps >= Steps){
+				cui_X_Steps -= Steps;
+			}
+			else{
+				cui_X_Steps = 0;
+			}
 			break;
 		case SOUTH:
 			cui_Y_Steps += Steps;
@@ -586,6 +592,11 @@ void Update_XY_Coords(unsigned long Steps, unsigned int Direction){
 void Go_Home(void){
 	//change to false to prevent recursion
 	cub_Cup_Found = false;
+
+	//because we need to have sufficient turning radius we need to decrement y by the turning radius
+	if(cui_Y_Steps>=STEPS_Y_ADJUST){
+		cui_Y_Steps -= STEPS_Y_ADJUST;
+	}
 
 	//reorient
 	switch(caui_Orientation[cui_Orientation_Index]){
