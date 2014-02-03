@@ -62,7 +62,6 @@ void main(void) {
 	__delay_cycles(4000000);
 	//____________________________
 
-
 	//***************************
 	//Determine if test or run
 	//***************************
@@ -80,6 +79,7 @@ void main(void) {
 	//____________________________
 
 
+	ui_Run_Mode = RUN_MODE;
 	//***************************
 	//Either run TEST MODE or RUN MODE
 	//***************************
@@ -242,7 +242,11 @@ void main(void) {
 		P1OUT |= LED_GREEN;
 
 		//set up navigation profiles
-		Create_Nav_Profile(0,3250,4500,3250,10,10,1,1);
+		Create_Nav_Profile(0,4000,5500,4000,10,10,1,1);
+
+		//*******************************
+		Initialize_Bits();
+		//*******************************
 
 		//*******************************
 		//set extract bit to input
@@ -258,9 +262,9 @@ void main(void) {
 		//***************************
 		//NAVIGATION ALGO HERE
 		//***************************
-		Line();
+		//Line();
 		//Square();
-		//Final_Run();
+		Final_Run();
 	}
 	//____________________________
   
@@ -273,12 +277,12 @@ void main(void) {
 
 void Line()
 {
-	int i_Spd = 3300;
+	int i_Spd = 1500;
 
 	for(;;){
 		//Stright from start then turn left
 		Create_Nav_Profile(0,i_Spd,i_Spd,i_Spd,10,10,1,1);
-		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
+		Straight(FORWARD,TABLE_LENGTH_STEPS,0);
 		__delay_cycles(5000000);
 		//i_Spd +=500;
 	}
@@ -289,9 +293,9 @@ void Square()
 {
 	for(;;){
 		//Stright from start then turn left
-		Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,0,0);
+		Straight(FORWARD,TABLE_LENGTH_STEPS,0);
 		__delay_cycles(5000000);
-		Turn(RIGHT,0,0,DIME);
+		Turn(RIGHT,0,SWEEP);
 		__delay_cycles(5000000);
 	}
 }
@@ -299,71 +303,71 @@ void Square()
 
 void Final_Run()
 {
-	unsigned int i_Left_Profile = 0, i_Right_Profile = 0;
+	const unsigned int i_Left_Profile = 0;
 
 		  //Stright from start then turn left
-	    Straight(FORWARD,TABLE_LENGTH_STEPS,TABLE_LENGTH_STEPS,i_Left_Profile,i_Right_Profile);
+	    Straight(FORWARD,TABLE_LENGTH_STEPS,i_Left_Profile);
 	    __delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile,SWEEP);
+		Turn(LEFT,i_Left_Profile,SWEEP);
 		__delay_cycles(5000000);
 
 		//straight across top of table then turn left
-	    Straight(FORWARD,TABLE_WIDTH_STEPS,TABLE_WIDTH_STEPS,i_Left_Profile,i_Right_Profile);
+	    Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
 	    __delay_cycles(5000000);
-	    Turn(LEFT,i_Left_Profile,i_Right_Profile,SWEEP);
+	    Turn(LEFT,i_Left_Profile,SWEEP);
 	    __delay_cycles(5000000);
 
 	    //Down left hand side then turn left
-	    Straight(FORWARD,GRID_STEPS,GRID_STEPS,i_Left_Profile,i_Right_Profile);
+	    Straight(FORWARD,GRID_STEPS,i_Left_Profile);
 	    __delay_cycles(5000000);
-	    Turn(LEFT,i_Left_Profile,i_Right_Profile,DIME);
+	    Turn(LEFT,i_Left_Profile,DIME);
 	    __delay_cycles(5000000);
 
 	    //straight back across table then turn right
-	    Straight(FORWARD,TABLE_WIDTH_STEPS,TABLE_WIDTH_STEPS,i_Left_Profile,i_Right_Profile);
+	    Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
 	    __delay_cycles(5000000);
-	    Turn(RIGHT,i_Left_Profile,i_Right_Profile,SWEEP);
+	    Turn(RIGHT,i_Left_Profile,SWEEP);
 		__delay_cycles(5000000);
 
 		//down right hand side then turn right
-		Straight(FORWARD,GRID_STEPS,GRID_STEPS,i_Left_Profile,i_Right_Profile);
+		Straight(FORWARD,GRID_STEPS,i_Left_Profile);
 		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile,i_Right_Profile, DIME);
+		Turn(RIGHT,i_Left_Profile, DIME);
 		__delay_cycles(5000000);
 
 		//straight across table to left then turn left
-		Straight(FORWARD,TABLE_WIDTH_STEPS,TABLE_WIDTH_STEPS,i_Left_Profile,i_Right_Profile);
+		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
 		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile, SWEEP);
+		Turn(LEFT,i_Left_Profile, SWEEP);
 		__delay_cycles(5000000);
 
 		//add in two more crosses
 
 		//Down left hand side then turn left
-		Straight(FORWARD,GRID_STEPS,GRID_STEPS,i_Left_Profile,i_Right_Profile);
+		Straight(FORWARD,GRID_STEPS,i_Left_Profile);
 		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile, DIME);
+		Turn(LEFT,i_Left_Profile, DIME);
 		__delay_cycles(5000000);
 
 		//straight back across table then turn right
-		Straight(FORWARD,TABLE_WIDTH_STEPS,TABLE_WIDTH_STEPS,i_Left_Profile,i_Right_Profile);
+		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
 		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile,i_Right_Profile, SWEEP);
+		Turn(RIGHT,i_Left_Profile, SWEEP);
 		__delay_cycles(5000000);
 
 		//down right hand side then turn right
-		Straight(FORWARD,GRID_STEPS,GRID_STEPS,i_Left_Profile,i_Right_Profile);
+		Straight(FORWARD,GRID_STEPS,i_Left_Profile);
 		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile,i_Right_Profile, DIME);
+		Turn(RIGHT,i_Left_Profile, DIME);
 		__delay_cycles(5000000);
 
 		//straight across table to left then turn left
-		Straight(FORWARD,TABLE_WIDTH_STEPS,TABLE_WIDTH_STEPS,i_Left_Profile,i_Right_Profile);
+		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
 		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,i_Right_Profile, SWEEP);
+		Turn(LEFT,i_Left_Profile, SWEEP);
 		__delay_cycles(5000000);
 
-		Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*2,TABLE_LENGTH_STEPS-GRID_STEPS*2,i_Left_Profile,i_Right_Profile);
+		Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*2,i_Left_Profile);
 		__delay_cycles(5000000);
 }
 

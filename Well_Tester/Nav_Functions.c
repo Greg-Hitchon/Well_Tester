@@ -38,7 +38,6 @@ void Update_State(unsigned int);
 #define NUM_NAV_PROFILES		(1)
 #define MIN_TICK_INCREMENT		(1000)
 #define NUM_STATES				(8)
-#define NUM_OUTPUTS				(4)
 #define NUM_MOTORS				(2)
 
 //secondary (calculated) values
@@ -47,12 +46,13 @@ void Update_State(unsigned int);
 //**********************************************************************************************************||
 //constants (calibration and system parameters)
 //**********************************************************************************************************||
-const unsigned int cui_Steps_Per_Sweep = 330;
-const unsigned int cui_Steps_Per_Dime = 174;
+const unsigned int cui_Steps_Per_Sweep = 660;
+const unsigned int cui_Steps_Per_Dime = 348;
 //This configuration implies:
 //Motor 1: a=Bit0, a'=Bit2; b=Bit1, b'=Bit3
 //Motor 2: a=Bit4, a'=Bit6; b=Bit5, b'=Bit7
 const char cch_State_Map[NUM_MOTORS][NUM_STATES] = {{BIT0,BIT3,BIT1,BIT0,BIT2,BIT1,BIT3,BIT2},{BIT4,BIT7,BIT5,BIT4,BIT6,BIT5,BIT7,BIT6}};
+
 
 //**********************************************************************************************************||
 //**********************************************************************************************************||
@@ -79,6 +79,7 @@ struct Nav_Profile s_Nav_Profiles[NUM_NAV_PROFILES];
 
 //variables
 unsigned int caui_Last_State[2] ={NUM_STATES+1};
+unsigned int caui_State_Direction[2]={FORWARD};
 
 //**********************************************************************************************************||
 //core functions
@@ -88,6 +89,21 @@ unsigned int caui_Last_State[2] ={NUM_STATES+1};
 //**********************************************************************************************************||
 //**********************************************************************************************************||
 
+
+//sets the state to 0 state
+void Initialize_Bits(void){
+	//set last state to 0
+	caui_Last_State[LEFT]=0;
+	caui_Last_State[RIGHT]=0;
+
+	//update motor pins
+	P2DIR |= 0xFF;
+	P2SEL = 0x0;
+	P2IN &= ~0xFF;
+	P2IFG = 0x0;
+	//for each motor we need to set bits to the initial 0 state
+	P2OUT = BIT0 | BIT3 | BIT4 | BIT7;
+}
 
 //this dictates the target steps, speed etc.  This is used as a template to construct the navigation
 //parameters within a specific motor struct.  The values will change dependent on the step count
@@ -169,34 +185,33 @@ void Set_Motor(	unsigned int Motor_ID,
 	if (Motor_ID==BOTH_MOTORS){
 		//NOTE: CHANGING MOTOR ID HERE
 		Motor_ID = CONC_MOTOR;
-	}
-	//get the index value (just id-1)
-	ui_Motor_Index = Motor_ID-1;
-
-	//if motor_id is both then we are going to be running in concurrent mode
-	if(Motor_ID==BOTH_MOTORS){
+		ui_Motor_Index=CONC_MOTOR - 1;
 		//save directionality
 		s_Cur_Motor_State[ui_Motor_Index].Direction = Direction;
 		//save concurrency bool
-		s_Cur_Motor_State[CONC_MOTOR-1].Is_Concurrent = true;
+		s_Cur_Motor_State[ui_Motor_Index].Is_Concurrent = true;
 	}
-	else if (Motor_ID == LEFT_MOTOR){
-		if (Direction == FORWARD){
-			s_Cur_Motor_State[ui_Motor_Index].Direction = LEFT_FORWARD;
+	else{
+		//get the index value (just id-1)
+		ui_Motor_Index = Motor_ID-1;
+		//have to explicitly get direction as take an int for both, but just forward/back for single
+		if (Motor_ID == LEFT_MOTOR){
+			if (Direction == FORWARD){
+				s_Cur_Motor_State[ui_Motor_Index].Direction = LEFT_FORWARD;
+			}
+			else{
+				s_Cur_Motor_State[ui_Motor_Index].Direction = LEFT_BACKWARD;
+			}
 		}
-		else{
-			s_Cur_Motor_State[ui_Motor_Index].Direction = LEFT_BACKWARD;
+		else if (Motor_ID == RIGHT_MOTOR){
+			if (Direction == FORWARD){
+				s_Cur_Motor_State[ui_Motor_Index].Direction = RIGHT_FORWARD;
+			}
+			else{
+				s_Cur_Motor_State[ui_Motor_Index].Direction = RIGHT_BACKWARD;
+			}
 		}
 	}
-	else if (Motor_ID == RIGHT_MOTOR){
-		if (Direction == FORWARD){
-			s_Cur_Motor_State[ui_Motor_Index].Direction = RIGHT_FORWARD;
-		}
-		else{
-			s_Cur_Motor_State[ui_Motor_Index].Direction = RIGHT_BACKWARD;
-		}
-	}
-
 
 	//get target steps here
 	s_Cur_Motor_State[ui_Motor_Index].Step_Target = Steps;
@@ -302,17 +317,55 @@ void Restore_State(unsigned int Motor_ID){
 }
 */
 
-void Update_State(unsigned int Motor_ID){
-	unsigned int i, Bit_Total = 0;
+//updates bits, takes either motor or both
+void Update_State(unsigned int Motor_Index){
+	unsigned int Bit_Total = 0, i, Motor_ID;
+	bool ba_Is_Backwards[2]={false};
 
-	for (i=0;i<NUM_MOTORS;i++){
+
+	if(s_Cur_Motor_State[Motor_Index].Is_Concurrent){
+		Motor_ID = BOTH_MOTORS;
+		ba_Is_Backwards[LEFT] = (s_Cur_Motor_State[Motor_Index].Direction & LEFT_BACKWARD);
+		ba_Is_Backwards[RIGHT] =  (s_Cur_Motor_State[Motor_Index].Direction & RIGHT_BACKWARD);
+	}
+	else if (Motor_Index == LEFT) {
+		Motor_ID = LEFT_MOTOR;
+		ba_Is_Backwards[LEFT] = (s_Cur_Motor_State[LEFT].Direction & LEFT_BACKWARD);
+	}
+	else{
+		Motor_ID= RIGHT_MOTOR;
+		ba_Is_Backwards[RIGHT] = (s_Cur_Motor_State[RIGHT].Direction & RIGHT_BACKWARD);
+	}
+
+	for(i=0; i<2;i++){
 		if(Motor_ID & (i+1)){
-			//cycle through 0-7
-			if(++caui_Last_State[i] > (NUM_STATES-1)){
-				caui_Last_State[i] = 0;
+			//if backwards then we move the state backwards else forwards
+			if(ba_Is_Backwards[i]){
+				if(caui_State_Direction[i] == BACKWARD){
+					if(caui_Last_State[i] == 0){
+						caui_Last_State[i] = (NUM_STATES - 1);
+					}
+					else{
+						caui_Last_State[i]--;
+					}
+				}
+				else{
+					caui_State_Direction[i] = BACKWARD;
+				}
 			}
+			else {
+				if(caui_State_Direction[i] == FORWARD){
+					if(++caui_Last_State[i] > (NUM_STATES-1)){
+						caui_Last_State[i] = 0;
+					}
+				}
+				else{
+					caui_State_Direction[i] = FORWARD;
+				}
+			}
+
 			//add to bit total
-			Bit_Total += cch_State_Map[i][caui_Last_State[i]];
+			Bit_Total += (unsigned int) (cch_State_Map[i][caui_Last_State[i]]);
 		}
 	}
 
@@ -366,12 +419,12 @@ void Turn(	unsigned int Direction,
 	if(Type == SWEEP){
 	//actually set motors
 		if(Direction == LEFT){
-			Set_Motor(RIGHT_MOTOR,FORWARD, cui_Steps_Per_Sweep, Profile_ID);
+			Set_Motor(RIGHT_MOTOR, FORWARD, cui_Steps_Per_Sweep, Profile_ID);
 			Start_Motor(RIGHT_MOTOR);
 			Hold_Until_Finished();
 		}
 		else{
-			Set_Motor(LEFT_MOTOR,FORWARD, cui_Steps_Per_Sweep, Profile_ID);
+			Set_Motor(LEFT_MOTOR, FORWARD, cui_Steps_Per_Sweep, Profile_ID);
 			Start_Motor(LEFT_MOTOR);
 			Hold_Until_Finished();
 		}
@@ -457,13 +510,7 @@ __interrupt void TIMER0_OTHER_ISR(void){
 				s_Cur_Motor_State[ui_Motor_Index].Step_Count++;
 
 				//actually update pins here
-				if(s_Cur_Motor_State[ui_Motor_Index].Is_Concurrent){
-					Update_State(BOTH_MOTORS);
-				}
-				else{
-					Update_State(ui_Motor_Index+1);
-				}
-
+				Update_State(ui_Motor_Index);
 
 				//update period here if necessary
 				if ((s_Cur_Motor_State[ui_Motor_Index].Has_ACC) &&

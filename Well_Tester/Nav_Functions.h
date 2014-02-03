@@ -37,4 +37,6 @@ void Set_Motor(	unsigned int Motor_ID,
 				unsigned long Steps,
 				unsigned int Profile_ID);
 
+void Initialize_Bits(void);
+
 #endif /* NAV_FUNCTIONS_H_ */

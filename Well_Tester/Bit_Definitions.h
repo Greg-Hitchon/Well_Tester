@@ -42,7 +42,8 @@
 #define BIT_MRB         	        (0x10)
 #define BIT_LEFT_MOTOR		        (BIT_MLA+BIT_MLB)
 #define BIT_RIGHT_MOTOR		        (BIT_MRA+BIT_MRB)
-#define BIT_ALL_MOTORS		        (BIT_LEFT_MOTOR+BIT_RIGHT_MOTOR)
+#define BIT_ALL_MOTORS		        (0xFF)
+//(BIT_LEFT_MOTOR+BIT_RIGHT_MOTOR)
 
 #define SWEEP						(0x1)
 #define DIME						(0x2)
