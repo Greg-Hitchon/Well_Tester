@@ -19,17 +19,21 @@
 #include "cstbool.h"
 
 //macro definitions
-#define TICK_FREQUENCY (CLOCK_FREQ/8)
-#define TICK_RESOLUTION 50
-#define CAP_DELAY 100
+#define TICK_FREQUENCY 			(CLOCK_FREQ/8)
+#define TICK_RESOLUTION 		(50)
+#define PULSE_PERIOD_TICKS 		(0xFFFF)
+#define PULSE_DURATION_TICKS	(20)
+#define CUP_FOUND_TICKS			(1000000UL)
+
 
 //function definitions
 unsigned int cstlog2(unsigned int);
 void Discharge_Cap(unsigned int);
 
 //global variables
-unsigned long gul_Tick_Count, gul_ADC_Total, gul_Freq_Target, gul_Freq_Count, gul_Max_Ticks;
+unsigned long gul_Tick_Count, gul_ADC_Total;
 unsigned int gui_Channel, gui_ADC_Count, gui_ADC_Target;
+bool gub_Counter_Running = false, gub_Pulse_Start = false, gub_Pulse_Enabled = false, gub_Start_Count = false;
    
 
 void Get_Result(void){
@@ -88,73 +92,117 @@ ADC10AE0 = 0x0;
 return (unsigned int) (gul_ADC_Total/gui_ADC_Count);
 }
 
-//this function uses timera channel 0 to measure the frequency of 
-unsigned long Frequency_Read(unsigned int Channel, 
-                            unsigned long Max_Input_Count,
-                            unsigned long Max_Clock_Count,
-                            bool Return_Total){
-  //disable all interrupts
-  __disable_interrupt();
-  
-  //clear global vars
-  gul_Tick_Count = 0;
-  gul_Freq_Count = 0;
-  gul_Max_Ticks = Max_Clock_Count;
-  gul_Freq_Target = Max_Input_Count;
-  gui_Channel = Channel;
 
-  
-  //set up timera (continuous mode, source: smclk, clear, interrupts enabled, divide by 8)
-  //Divide by 8 here is necessary as if not used the taccr1 misses the increment
-  //and the frequency is then 1/full clock cycle (65535)
-  TA1CTL = TASSEL_2 | MC_1 | TAIE | TACLR | ID_3;
-   
-  //set up inturrupt period
-  TA1CCR0 = TICK_RESOLUTION;
-  TA1CCTL0 |= CCIE;
-  
-  //set up interrupts on port 2, rising edge needed for cap 
-  P2IE |= Channel;
-  P2IES &= ~Channel;
-  
-  //start oscillation
-  Discharge_Cap(Channel);
-  
-  //enter low power mode, wait for completion
-   __bis_SR_register(CPUOFF + GIE); 
-   
-  //trap div0 error
-  if(gul_Tick_Count > 0){
-    if (Return_Total){
-    	//return the total frequency count
-    	return gul_Freq_Count;
-    }
-    else{
-    	//returns a simple ratio of the counted frequency/counted clock ticks scaled to the clock frequency
-    	return (1000UL*gul_Freq_Count*TICK_FREQUENCY)/gul_Tick_Count;
-    }
-  }
-  else{
-    return 0;
-  }
-     
+
+//***********************************************************************************************************************************************
+//This controls the pulse sending/receiving
+//***********************************************************************************************************************************************
+
+void Initialize_Pulses(void){
+	//need to have timer running here
+	if(!gub_Counter_Running){
+		Initialize_Counter();
+	}
+
+	//set up interrupts for the echo pin
+	P1DIR &= ~BIT_ECHO;
+	//rising edge trigger
+	P1IES &= ~BIT_ECHO;
+	//enable interrupt
+	P1IE |= BIT_ECHO;
+
+
+	//set the pulse width
+	TA1CCR1 = PULSE_PERIOD_TICKS;
+	TA1CCTL1 |= CCIE;
+
+	//initialize trigger bit
+	P1DIR |= BIT_TRIGGER;
+	P1OUT &= ~ BIT_TRIGGER;
+
+	//this toggles between waiting for a pulse length and a full wait
+	gub_Pulse_Start = true;
+	gub_Start_Count = true;
+	gub_Pulse_Enabled = true;
 }
 
-//this funciton clears the cap at a given channel.
-//first sets the pin to output, then clears it (sets low)
-//last step is to set the pin back to input after a delay
-void Discharge_Cap(unsigned int Channel){
-  //setup oscillator
-  //clear cap
-  P2DIR = Channel;
-  P2OUT = 0x0;
-  
-  //allow discharge
-  __delay_cycles(CAP_DELAY);
-  
-  //start oscillation
-  P2DIR &= ~Channel;
+bool Get_Pulse_Status(void){
+	return gub_Pulse_Enabled;
 }
+
+bool Update_Pulse_Tracker(void){
+	if(gub_Start_Count){
+		//reset counter
+		Reset_Count();
+		//configure for falling edge
+		P1IES |= BIT_ECHO;
+		//toggle flag
+		gub_Start_Count = false;
+	}
+	else{
+		if(Get_Count() < CUP_FOUND_TICKS){
+			Shutdown_Pulses();
+			Shutdown_Counter();
+			return true;
+		}
+		else{
+			//rising edge trigger
+			P1IES &= ~BIT_ECHO;
+			gub_Start_Count = true;
+		}
+	}
+}
+
+void Shutdown_Pulses(void){
+	//turn off bool
+	gub_Pulse_Enabled = false;
+
+	//turn off interrupts at echo pin
+	P1IE &= ~BIT_ECHO;
+
+	//turn off pulse width
+	TA1CCTL1 &= ~CCIE;
+}
+//***********************************************************************************************************************************************
+
+
+//***********************************************************************************************************************************************
+//This controls the timer used to track time
+//***********************************************************************************************************************************************
+void Initialize_Counter(void){
+	//set up timera (continuous mode, source: smclk, clear, interrupts enabled, divide by 8)
+	//Divide by 8 here is necessary as if not used the taccr1 misses the increment
+	//and the frequency is then 1/full clock cycle (65535)
+	TA1CTL = TASSEL_2 | MC_1 | TAIE | TACLR | ID_3;
+
+	//set main counter to 0
+	gul_Tick_Count = 0;
+
+	//set up inturrupt period
+	TA1CCR0 = TICK_RESOLUTION;
+	TA1CCTL0 |= CCIE;
+
+	//indicate counter is running
+	gub_Counter_Running = true;
+}
+
+void Shutdown_Counter(void){
+	//disable interrupts
+	TA1CTL &= ~TAIE;
+
+	//indicate counter no longer running
+	gub_Counter_Running = false;
+}
+
+void Reset_Count(void){
+	gul_Tick_Count = 0;
+}
+
+unsigned long Get_Count(void){
+	return gul_Tick_Count;
+}
+//***********************************************************************************************************************************************
+
 
 //log2 function
 unsigned int cstlog2 (unsigned int val) {
@@ -186,58 +234,36 @@ __interrupt void ADC_ISR(void){
   }
 }
 
+//this is used for the counter function
 #pragma vector=TIMER1_A0_VECTOR
 __interrupt void TIMER1_CCR0_ISR(void){
-    if (gul_Tick_Count < gul_Max_Ticks){
-      //increment tick count by 10 to increase performacne (slightly lower resolution
-      gul_Tick_Count += (TICK_RESOLUTION + 1);
-    }
-    else{
-      //disable interrupts
-      TA1CTL &= ~TAIE;
-       // Clear CPUOFF bit from 0(SR)
-      __bic_SR_register_on_exit(CPUOFF);
-    }
+	//increment tick count by 10 to increase performacne (slightly lower resolution
+	 gul_Tick_Count += (TICK_RESOLUTION + 1);
 }
 
 //clear flag here
 #pragma vector=TIMER1_A1_VECTOR
 __interrupt void TIMER1_OTHER_ISR(void){
-  TA1CTL &= ~TAIFG;
+	//flags reset by reading ta0iv
+	switch(__even_in_range(TA1IV,0xA)){
+	//pulse period tracker
+	case TA1IV_TACCR1:
+		if (gub_Pulse_Start){
+			P1OUT |= BIT_TRIGGER;
+			TA1CCR1 += PULSE_DURATION_TICKS;
+			gub_Pulse_Start = false;
+		}
+		else{
+			P1OUT &= ~ BIT_TRIGGER;
+			TA1CCR1 += PULSE_PERIOD_TICKS;
+			gub_Pulse_Start = true;
+		}
+		break;
+	case TA1IV_TACCR2:
+	default: break;
+	}
+	//clear flag
+	TA1CTL &= ~TAIFG;
 }
 
-#pragma vector = PORT2_VECTOR
-__interrupt void PORT2_ISR(void){
-  
- //start oscillation
 
-	//copied start (inlining)
-	//setup oscillator
-	//clear cap
-	  P2DIR = gui_Channel;
-	  P2OUT = 0x0;
-
-	  //allow discharge
-	  __delay_cycles(CAP_DELAY);
-
-	  //start oscillation
-	  P2DIR &= ~gui_Channel;
-	  //copied end (inlining
-
-	//Discharge_Cap(gui_Channel);
-   
-   //counter
-    if (gul_Freq_Count < gul_Freq_Target){
-        //increment the frequency counter each timer interrupt is requested
-        gul_Freq_Count++;
-      }
-      else {
-        //disable interrupts and set flag
-        //P2IE = 0x0;
-        TA0CCTL1 &= ~CCIE;
-        // Clear CPUOFF bit from 0(SR)
-        __bic_SR_register_on_exit(CPUOFF);
-      }
-  //reset interrupt flag
-  P2IFG = 0x0;
-}

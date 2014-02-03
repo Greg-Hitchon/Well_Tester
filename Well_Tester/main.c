@@ -218,8 +218,9 @@ void main(void) {
 		//set up navigation profiles
 		//*******************************
 		__enable_interrupt();
-		Wait_For_Startup();
-		Set_Up_Extraction();
+		//Wait_For_Startup();
+		//Set_Up_Extraction();
+		Initialize_Pulses();
 		Initialize_Bits();
 		Initialize_Tracking();
 		Create_Nav_Profile(0,4000,5500,4000,10,10,1,1);

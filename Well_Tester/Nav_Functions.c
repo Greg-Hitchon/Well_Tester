@@ -695,6 +695,7 @@ __interrupt void TIMER0_CCRO_ISR(void){
 //all port 1 interrupts, controls startup and cup locating
 #pragma vector=PORT1_VECTOR
 __interrupt void PORT1_ISR(void){
+	unsigned long Tick_Count = 0;
 
 	if((P1IFG & BIT_EXTRACT) && cub_Extract_Ready){
 		//disable interrupt
@@ -725,6 +726,27 @@ __interrupt void PORT1_ISR(void){
 		  P1OUT &= ~LED_RED;
 		  __delay_cycles(STARTUP_DELAY_TICKS);
 		  __bic_SR_register_on_exit(CPUOFF);
+	  }
+	  else if((P1IFG & BIT_ECHO) & Get_Pulse_Status()){
+		  //flag cup found
+		cub_Cup_Found = true;
+
+		//DO EXTRACTION ALGO
+		Extract_Liquid();
+
+		//check if can interrupt
+		if(cub_Can_Go_Home){
+			//update before going home
+			if(s_Cur_Motor_State[CONC_MOTOR-1].Direction & LEFT_FORWARD){
+				Update_XY_Coords(s_Cur_Motor_State[CONC_MOTOR-1].Step_Count,FORWARD);
+			}
+			else{
+				Update_XY_Coords(s_Cur_Motor_State[CONC_MOTOR-1].Step_Count,BACKWARD);
+			}
+			//after adjustment we can just go home
+			Go_Home();
+
+		}
 	  }
 
 	  //clear fgs

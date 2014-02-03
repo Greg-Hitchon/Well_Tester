@@ -18,6 +18,7 @@ unsigned long Frequency_Read(unsigned int Channel,
                             bool Return_Total);
 
 void Get_Result(void);
+void Reset_Count(void);
 
                 
 #endif /* MEASURE_FUNCTIONS_H_ */
