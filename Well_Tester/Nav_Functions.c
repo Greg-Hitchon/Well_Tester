@@ -718,11 +718,6 @@ void Cup_Found(void){
 //**********************************************************************************************************||
 //**********************************************************************************************************||
 
-#pragma vector=TIMER1_A0_VECTOR
-__interrupt void TIMER1_CCRO_ISR(void){
-	//interrupt flags are reset automatically
-	__no_operation();
-}
 
 //all port 1 interrupts, controls startup and cup locating
 #pragma vector=PORT1_VECTOR
@@ -761,6 +756,14 @@ __interrupt void PORT1_ISR(void){
 
 	  //clear fgs
 	  P1IFG = 0x0;
+}
+
+
+//flag is auto reset
+#pragma vector=TIMER1_A0_VECTOR
+__interrupt void TIMER1_CCRO_ISR(void){
+	//interrupt flags are reset automatically
+	__no_operation();
 }
 
 //clear flag here, also updates the motors
@@ -891,4 +894,6 @@ __interrupt void TIMER1_OTHER_ISR(void){
 			s_Cur_Motor_State[ui_Motor_Index].Overflows_Remaining--;
 		}
 	}
+	//clear flag
+	TA1CTL &= ~TAIFG;
 }

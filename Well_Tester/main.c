@@ -97,7 +97,7 @@ void main(void) {
 		//final
 		///Wait_For_Startup();
 		//Set_Up_Extraction();
-		Initialize_Pulses();
+		//Initialize_Pulses();
 		//for(;;){}
 		Initialize_Bits();
 		Initialize_Tracking();

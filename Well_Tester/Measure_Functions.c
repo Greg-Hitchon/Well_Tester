@@ -241,14 +241,14 @@ __interrupt void TIMER0_OTHER_ISR(void){
 		}
 		else{
 			P1OUT &= ~BIT_TRIGGER;
-			TA1CCR1 += gui_Num_Leftover;
+			TA0CCR1 += gui_Num_Leftover;
 			gub_Pulse_Start = true;
 			gui_Overflows_Remaining = gui_Overflow_Count;
 		}
 	default: break;
 	}
 	//clear flag
-	TA1CTL &= ~TAIFG;
+	TA0CTL &= ~TAIFG;
 }
 
 
