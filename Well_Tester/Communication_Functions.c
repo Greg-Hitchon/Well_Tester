@@ -1,20 +1,23 @@
+//System includes
 #include "Project_Parameters.h"
 #include TEST_CHIP
+#include <stdint.h>
 
+//User defined includes
 #include "cstbool.h"
 #include "Bit_Definitions.h"
 
-#define UART_DIVISOR ((int) 1666)
+#define UART_DIVISOR (UINT16_C(1666))
 
 void Print_String(char *);
 unsigned int strlen(const char *);
-char * UINT_TO_STRING(unsigned int i);
-char * ULONG_TO_STRING(unsigned long i);
+char * UINT_TO_STRING(uint16_t i);
+char * ULONG_TO_STRING(uint32_t i);
 
 
 char *Output_String;
 volatile bool vgb_Transmit_Complete = false;
-unsigned int i = 0;
+uint16_t i = 0;
 
 void Setup_Comms(void)
 {
@@ -35,14 +38,14 @@ void Output_Result(void){
 	__delay_cycles(16000000);
 }
   //char *c_Tst1;
-void Print_UINT(unsigned int Value){
+void Print_UINT(uint16_t Value){
 
   //c_Tst1 = UINT_TO_STRING(Value);
   //convert and use print string
   Print_String(UINT_TO_STRING(Value));
 }
 
-void Print_ULONG(unsigned long Value){
+void Print_ULONG(uint32_t Value){
 
   //c_Tst1 = UINT_TO_STRING(Value);
   //convert and use print string
@@ -74,7 +77,7 @@ unsigned int strlen(const char *str)
     return (s - str);
 }
 
-char * UINT_TO_STRING(unsigned int i)
+char * UINT_TO_STRING(uint16_t i)
 {
   static char buf[11];
   char* bp = buf+sizeof(buf);
@@ -86,7 +89,7 @@ char * UINT_TO_STRING(unsigned int i)
   return bp;
 }
 
-char * ULONG_TO_STRING(unsigned long i)
+char * ULONG_TO_STRING(uint32_t i)
 {
   static char buf[21];
   char* bp = buf+sizeof(buf);

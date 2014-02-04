@@ -17,6 +17,7 @@
 //syestem headers
 #include "Project_Parameters.h"
 #include TEST_CHIP
+#include <stdint.h>
 
 //user defined headers
 #include "Bit_Definitions.h"
@@ -26,17 +27,17 @@
 #include "cstbool.h"
 
 //function prototypes
-void Clear_State(unsigned int);
-void Save_State(unsigned int);
-void Set_Motor(	unsigned int Motor_ID,
-				unsigned int Direction,
-				unsigned long Steps,
-				unsigned int Profile_ID);
-void Start_Motor(unsigned int Motor_ID);
+void Clear_State(uint8_t Motor_ID);
+void Save_State(uint8_t Motor_ID);
+void Set_Motor(	uint8_t Motor_ID,
+				uint8_t Direction,
+				uint32_t Steps,
+				uint8_t Profile_ID);
+void Start_Motor(uint8_t Motor_ID);
 void Hold_Until_Finished(void);
-void Update_State(unsigned int);
+void Update_State(uint8_t Motor_ID);
 void Go_Home(void);
-void Update_XY_Coords(unsigned long, unsigned int);
+void Update_XY_Coords(uint32_t Steps, uint8_t Direction);
 
 
 //core preprocessor constants (distance in 0.1mm, frequency in KHz, time is in 1/100(seconds))
@@ -50,7 +51,7 @@ void Update_XY_Coords(unsigned long, unsigned int);
 
 
 //secondary (calculated) values
-#define ADJ_CLOCK_FREQ			(((unsigned long) CLOCK_FREQ)*12500UL)
+#define ADJ_CLOCK_FREQ			((UINT32_C(CLOCK_FREQ))*UINT32_C(12500))
 //this should be equal to STEPS_PER_SWEEP/PI
 #define STEPS_XY_PER_SWEEP		(230)
 //**********************************************************************************************************||
@@ -61,7 +62,7 @@ void Update_XY_Coords(unsigned long, unsigned int);
 //This configuration implies:
 //Motor 1: a=Bit0, a'=Bit2; b=Bit1, b'=Bit3
 //Motor 2: a=Bit4, a'=Bit6; b=Bit5, b'=Bit7
-const char cch_State_Map[NUM_MOTORS][NUM_STATES] = {{BIT0,BIT3,BIT1,BIT0,BIT2,BIT1,BIT3,BIT2},{BIT4,BIT7,BIT5,BIT4,BIT6,BIT5,BIT7,BIT6}};
+const uint8_t cch_State_Map[NUM_MOTORS][NUM_STATES] = {{BIT0,BIT3,BIT1,BIT0,BIT2,BIT1,BIT3,BIT2},{BIT4,BIT7,BIT5,BIT4,BIT6,BIT5,BIT7,BIT6}};
 
 
 //**********************************************************************************************************||
@@ -69,16 +70,18 @@ const char cch_State_Map[NUM_MOTORS][NUM_STATES] = {{BIT0,BIT3,BIT1,BIT0,BIT2,BI
 
 //structs
 //Note:  step target is needed because we are counting up not down.  This is for code clarity.
+//Mem: ~50Bytes
 struct Motor_State {
-	unsigned long Step_Target, Step_Count, Tick_Total;
-    unsigned int Direction, Overflows_Remaining, Profile_ID, Num_Leftover, Num_Overflows,
-    			Speed, ACC_End, DEC_Start, ACC_Rate, DEC_Rate, ACC_Period, DEC_Period, ACC_Period_Count, DEC_Period_Count;
+	uint32_t Step_Target, Step_Count, Tick_Total;
+    uint16_t Overflows_Remaining, Num_Leftover, Num_Overflows, Speed, ACC_End, DEC_Start, ACC_Rate, DEC_Rate, ACC_Period, DEC_Period, ACC_Period_Count, DEC_Period_Count;
+    uint8_t Direction,Profile_ID;
 	bool Is_Running, Has_ACC, Has_DEC, Is_Concurrent;
 };
 
+//Mem: ~30Bytes
 struct Nav_Profile{
-	unsigned long Period;
-	unsigned int Num_Overflows, Num_Leftover, ACC_Rate, DEC_Rate, ACC_Period, DEC_Period, ACC_Steps, DEC_Steps,
+	uint32_t Period;
+	uint16_t Num_Overflows, Num_Leftover, ACC_Rate, DEC_Rate, ACC_Period, DEC_Period, ACC_Steps, DEC_Steps,
 				Start_Speed, Target_Speed, End_Speed;
 	bool Has_DEC, Has_ACC;
 };
@@ -88,9 +91,13 @@ struct Motor_State s_Cur_Motor_State[NUM_MOTORS];
 struct Nav_Profile s_Nav_Profiles[NUM_NAV_PROFILES];
 
 //variables
-unsigned int caui_Last_State[2] ={NUM_STATES+1};
-unsigned int caui_State_Direction[2]={FORWARD}, caui_Orientation[4]={NORTH,EAST,SOUTH,WEST};
-unsigned int cui_X_Steps, cui_Y_Steps, cui_Orientation_Index;
+//Mem: ~20 Bytes
+uint16_t caui_Last_State[2] ={NUM_STATES+1};
+uint8_t caui_State_Direction[2]={FORWARD}, caui_Orientation[4]={NORTH,EAST,SOUTH,WEST};
+
+uint16_t cui_X_Steps, cui_Y_Steps;
+uint8_t cui_Orientation_Index;
+
 bool cub_Extract_Ready = false, cub_Can_Go_Home = false, cub_Cup_Found = false;
 
 //**********************************************************************************************************||
@@ -161,25 +168,25 @@ void Initialize_Bits(void){
 
 //this dictates the target steps, speed etc.  This is used as a template to construct the navigation
 //parameters within a specific motor struct.  The values will change dependent on the step count
-void Create_Nav_Profile(unsigned int Profile_ID,
-						unsigned int Start_Speed,
-						unsigned int Target_Speed,
-						unsigned int End_Speed,
-						unsigned int ACC_Rate,
-						unsigned int DEC_Rate,
-						unsigned int ACC_Period,
-						unsigned int DEC_Period){
+void Create_Nav_Profile(uint8_t Profile_ID,
+						uint16_t Start_Speed,
+						uint16_t Target_Speed,
+						uint16_t End_Speed,
+						uint16_t ACC_Rate,
+						uint16_t DEC_Rate,
+						uint16_t ACC_Period,
+						uint16_t DEC_Period){
 
 	//check if there is a valid profile id
 	if (Profile_ID < NUM_NAV_PROFILES){
 		//get starting ticks
-		s_Nav_Profiles[Profile_ID].Period = (unsigned long) (ADJ_CLOCK_FREQ/(4*Start_Speed));
+		s_Nav_Profiles[Profile_ID].Period = UINT16_C((ADJ_CLOCK_FREQ/(4*Start_Speed)));
 
 		//get starting overflows
-		s_Nav_Profiles[Profile_ID].Num_Overflows = ((unsigned int) ((s_Nav_Profiles[Profile_ID].Period)/ 0x10000UL));
+		s_Nav_Profiles[Profile_ID].Num_Overflows = (UINT16_C((s_Nav_Profiles[Profile_ID].Period)/ 0x10000UL));
 
 		//get starting leftover
-		s_Nav_Profiles[Profile_ID].Num_Leftover = ((unsigned int) ((s_Nav_Profiles[Profile_ID].Period) % 0x10000UL));
+		s_Nav_Profiles[Profile_ID].Num_Leftover = (UINT16_C((s_Nav_Profiles[Profile_ID].Period) % 0x10000UL));
 
 		//adjust for minimum
 		if (s_Nav_Profiles[Profile_ID].Num_Leftover < MIN_TICK_INCREMENT){
@@ -225,12 +232,13 @@ void Set_Timer(void){
 
 
 //this function sets up the struct used to define running parameters
-void Set_Motor(	unsigned int Motor_ID,
-				unsigned int Direction,
-				unsigned long Steps,
-				unsigned int Profile_ID){
+void Set_Motor(	uint8_t Motor_ID,
+				uint8_t Direction,
+				uint32_t Steps,
+				uint8_t Profile_ID){
 
-	unsigned int ui_Temp_Target_Speed = 0, ui_Motor_Index;
+	uint32_t ui_Temp_Target_Speed = 0;
+	uint8_t ui_Motor_Index;
 
 	//reset states here as we are not explicitly filling the entire struct
 	Clear_State(Motor_ID);
@@ -333,7 +341,7 @@ void Set_Motor(	unsigned int Motor_ID,
 }
 
 
-void Clear_State(unsigned int Motor_ID){
+void Clear_State(uint8_t Motor_ID){
 	static const struct Motor_State Empty_Struct = {0};
 
 	if (Motor_ID & LEFT_MOTOR){
@@ -346,8 +354,8 @@ void Clear_State(unsigned int Motor_ID){
 }
 
 //updates bits, takes either motor or both
-void Update_State(unsigned int Motor_Index){
-	unsigned int Bit_Total = 0, i, Motor_ID;
+void Update_State(uint8_t Motor_Index){
+	uint8_t Bit_Total = 0, i, Motor_ID;
 	bool ba_Is_Backwards[2]={false};
 
 
@@ -402,7 +410,7 @@ void Update_State(unsigned int Motor_Index){
 }
 
 //before the motors run (and after the running structs have been populated) we need to initialize a few ports/states
-void Start_Motor(unsigned int Motor_ID){
+void Start_Motor(uint8_t Motor_ID){
 	//check for concurrent here
 	if ((Motor_ID & CONC_MOTOR) && (s_Cur_Motor_State[CONC_MOTOR-1].Is_Concurrent)){
 		Motor_ID = CONC_MOTOR;
@@ -439,9 +447,9 @@ void Hold_Until_Finished(void){
 //**********************************************************************************************************||
 //**********************************************************************************************************||
 
-void Turn(	unsigned int Direction,
-			unsigned int Profile_ID,
-			unsigned int Type){
+void Turn(	uint8_t Direction,
+			uint8_t Profile_ID,
+			uint8_t Type){
 	//cant break out of a turn
 	cub_Can_Go_Home = false;
 
@@ -506,9 +514,9 @@ void Turn(	unsigned int Direction,
 
 }
 
-void Straight(	unsigned int Direction,
-				unsigned long Steps,
-				unsigned int Profile_ID){
+void Straight(	uint8_t Direction,
+				uint32_t Steps,
+				uint8_t Profile_ID){
 	//can break out of a straigt line
 	cub_Can_Go_Home = true;
 
@@ -531,7 +539,7 @@ void Straight(	unsigned int Direction,
 	Update_XY_Coords(Steps, Direction);
 }
 
-void Update_XY_Coords(unsigned long Steps, unsigned int Direction){
+void Update_XY_Coords(uint32_t Steps, uint8_t Direction){
 
 	if(Direction == FORWARD){
 		//adjust the coords based on steps taken in current movement
@@ -618,7 +626,7 @@ void Go_Home(void){
 		//infinite loop
 		__disable_interrupt();
 		for(;;){};
-		break;
+		//break;
 	case EAST:
 		//get to y direction
 		Turn(RIGHT,0,DIME);
@@ -637,7 +645,7 @@ void Go_Home(void){
 		//infinite loop
 		__disable_interrupt();
 		for(;;){};
-		break;
+		//break;
 	case SOUTH:
 		//do y translation
 		Straight(FORWARD,cui_Y_Steps,0);
@@ -656,7 +664,7 @@ void Go_Home(void){
 		//infinite loop
 		__disable_interrupt();
 		for(;;){};
-		break;
+		//break;
 	case WEST:
 		//do x translation
 		Straight(FORWARD,cui_X_Steps,0);
@@ -760,7 +768,7 @@ __interrupt void PORT1_ISR(void){
 #pragma vector=TIMER1_A1_VECTOR
 __interrupt void TIMER1_OTHER_ISR(void){
 	//bit flag
-	unsigned int ui_Motor_Index;
+	uint8_t ui_Motor_Index;
 	bool b_Do_Update = false;
 
 	//flags reset by reading ta0iv
@@ -803,13 +811,13 @@ __interrupt void TIMER1_OTHER_ISR(void){
 					//get starting ticks
 					s_Cur_Motor_State[ui_Motor_Index].Speed += s_Cur_Motor_State[ui_Motor_Index].ACC_Rate;
 
-					s_Cur_Motor_State[ui_Motor_Index].Tick_Total = (unsigned long) (ADJ_CLOCK_FREQ/(4*s_Cur_Motor_State[ui_Motor_Index].Speed));
+					s_Cur_Motor_State[ui_Motor_Index].Tick_Total = UINT32_C(ADJ_CLOCK_FREQ/(4*s_Cur_Motor_State[ui_Motor_Index].Speed));
 
 					//get starting overflows
-					s_Cur_Motor_State[ui_Motor_Index].Num_Overflows = ((unsigned int) ((s_Cur_Motor_State[ui_Motor_Index].Tick_Total)/ 0x10000UL));
+					s_Cur_Motor_State[ui_Motor_Index].Num_Overflows = (UINT16_C((s_Cur_Motor_State[ui_Motor_Index].Tick_Total)/ 0x10000UL));
 
 					//get starting leftover
-					s_Cur_Motor_State[ui_Motor_Index].Num_Leftover = ((unsigned int) ((s_Cur_Motor_State[ui_Motor_Index].Tick_Total) % 0x10000UL));
+					s_Cur_Motor_State[ui_Motor_Index].Num_Leftover = (UINT16_C((s_Cur_Motor_State[ui_Motor_Index].Tick_Total) % 0x10000UL));
 
 					//adjust for minimum
 					if (s_Cur_Motor_State[ui_Motor_Index].Num_Leftover < MIN_TICK_INCREMENT){
@@ -825,13 +833,13 @@ __interrupt void TIMER1_OTHER_ISR(void){
 					//get starting ticks
 					s_Cur_Motor_State[ui_Motor_Index].Speed -= s_Cur_Motor_State[ui_Motor_Index].DEC_Rate;
 
-					s_Cur_Motor_State[ui_Motor_Index].Tick_Total = (unsigned long) (ADJ_CLOCK_FREQ/(4*s_Cur_Motor_State[ui_Motor_Index].Speed));
+					s_Cur_Motor_State[ui_Motor_Index].Tick_Total = UINT32_C(ADJ_CLOCK_FREQ/(4*s_Cur_Motor_State[ui_Motor_Index].Speed));
 
 					//get starting overflows
-					s_Cur_Motor_State[ui_Motor_Index].Num_Overflows = ((unsigned int) ((s_Cur_Motor_State[ui_Motor_Index].Tick_Total)/ 0x10000UL));
+					s_Cur_Motor_State[ui_Motor_Index].Num_Overflows = (UINT16_C((s_Cur_Motor_State[ui_Motor_Index].Tick_Total)/ 0x10000UL));
 
 					//get starting leftover
-					s_Cur_Motor_State[ui_Motor_Index].Num_Leftover = ((unsigned int) ((s_Cur_Motor_State[ui_Motor_Index].Tick_Total) % 0x10000UL));
+					s_Cur_Motor_State[ui_Motor_Index].Num_Leftover = (UINT16_C((s_Cur_Motor_State[ui_Motor_Index].Tick_Total) % 0x10000UL));
 
 					//adjust for minimum
 					if (s_Cur_Motor_State[ui_Motor_Index].Num_Leftover < MIN_TICK_INCREMENT){

@@ -5,6 +5,9 @@
  *      Author: greg
  */
 
+//system includes
+#include <stdint.h>
+
 #ifndef EXTRACTION_FUNCTIONS_H_
 #define EXTRACTION_FUNCTIONS_H_
 

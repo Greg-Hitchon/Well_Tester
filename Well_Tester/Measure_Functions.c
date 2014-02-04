@@ -12,13 +12,18 @@
  *the number of timerA cycles in that time period to find the relative frequency
  */
 
+
+
+
 //system includes
 #include "Project_Parameters.h"
+#include TEST_CHIP
+#include <stdint.h>
+
+//user defined includes
 #include "Nav_Functions.h"
 #include "Bit_Definitions.h"
 #include "Communication_Functions.h"
-#include TEST_CHIP
-
 #include "cstbool.h"
 
 //macro definitions
@@ -31,16 +36,17 @@
 
 
 //function definitions
-unsigned int cstlog2(unsigned int);
+uint16_t cstlog2(unsigned int);
 void Shutdown_Pulses(void);
 void Initialize_Counter(void);
 void Reset_Count(void);
 void Shutdown_Counter(void);
-unsigned long Get_Count(void);
+uint32_t Get_Count(void);
 
 //global variables
-unsigned long gul_ADC_Total;
-unsigned int gul_Tick_Count, gui_Channel, gui_ADC_Count, gui_ADC_Target, gui_Overflows_Remaining, gui_Overflow_Count, gui_Num_Leftover;
+uint32_t gul_ADC_Total;
+uint16_t gul_Tick_Count, gui_ADC_Count, gui_ADC_Target, gui_Overflows_Remaining, gui_Overflow_Count, gui_Num_Leftover;
+uint8_t gui_Channel;
 bool gub_Counter_Running = false, gub_Pulse_Start = false, gub_Pulse_Enabled = false, gub_Start_Count = false;
    
 
@@ -51,14 +57,8 @@ void Get_Result(void){
 //Analog_Read performs much like the "Arduino" version with a 10-bit digital 
 //value being returned that is scaled to 0-2.5V on a given port
    //NOTE:  internal reference does not seem to be perfect 2.5V so some adjustment is required for accurate performance, temperature dependent
-unsigned int Analog_Read(unsigned int Channel, 
-                    unsigned int Sample_Target){
-
-
-//check valid channel             
-if (Channel > BIT7){
-  return 0;
-}
+unsigned int Analog_Read(uint8_t Channel,
+						uint16_t Sample_Target){
 
 //disable interrupts
 __disable_interrupt();
@@ -97,7 +97,7 @@ ADC10CTL1 &= ~(0xF << 12);
 ADC10AE0 = 0x0;
 
 //return value
-return (unsigned int) (gul_ADC_Total/gui_ADC_Count);
+return UINT16_C(gul_ADC_Total/gui_ADC_Count);
 }
 
 
@@ -120,8 +120,8 @@ void Initialize_Pulses(void){
 	P1IE |= BIT_ECHO;
 
 	//get number of overflows
-	gui_Overflow_Count = (unsigned int) (PULSE_PERIOD_TICKS / 0x10000UL);
-	gui_Num_Leftover = (unsigned int) (PULSE_PERIOD_TICKS % 0x10000UL);
+	gui_Overflow_Count = UINT16_C(PULSE_PERIOD_TICKS / 0x10000UL);
+	gui_Num_Leftover = UINT16_C(PULSE_PERIOD_TICKS % 0x10000UL);
 
 	//check and fill remaining overflows
 	if(gui_Num_Leftover < MIN_LEFTOVER_TICKS){
@@ -178,8 +178,8 @@ void Shutdown_Counter(void){
 
 
 //log2 function
-unsigned int cstlog2 (unsigned int val) {
-    unsigned int ret = -1;
+uint16_t cstlog2 (unsigned int val) {
+	uint16_t ret = -1;
     while (val != 0) {
         val >>= 1;
         ret++;
@@ -210,7 +210,7 @@ __interrupt void ADC_ISR(void){
 //this is used for the counter function
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void TIMER0_CCR0_ISR(void){
-	static unsigned int Last_Time = 0;
+	static uint16_t Last_Time = 0;
 
 	//check if done
 	if(TA0CCR0 - Last_Time < CUP_FOUND_TICKS){

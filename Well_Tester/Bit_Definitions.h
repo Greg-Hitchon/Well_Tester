@@ -3,6 +3,8 @@
  *
  *  Created on: Oct 17, 2013
  *      Author: Greg
+ *
+ *      NOTE: All bit definitions are no bigger than 8 bits
  */
 
 #ifndef BIT_DEFINITIONS_H_
