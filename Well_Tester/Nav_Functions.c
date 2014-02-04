@@ -774,7 +774,7 @@ __interrupt void TIMER1_OTHER_ISR(void){
 	uint8_t ui_Motor_Index;
 	bool b_Do_Update = false;
 
-	//flags reset by reading ta0iv
+	//flags reset by reading ta1iv
 	switch(__even_in_range(TA1IV,0xA)){
 	case TA1IV_TACCR1:
 		//flag update needed
@@ -855,10 +855,10 @@ __interrupt void TIMER1_OTHER_ISR(void){
 
 				//update counter
 				if(ui_Motor_Index == LEFT){
-					TA0CCR1 += s_Cur_Motor_State[ui_Motor_Index].Num_Leftover;
+					TA1CCR1 += s_Cur_Motor_State[ui_Motor_Index].Num_Leftover;
 				}
 				else{
-					TA0CCR2 += s_Cur_Motor_State[ui_Motor_Index].Num_Leftover;
+					TA1CCR2 += s_Cur_Motor_State[ui_Motor_Index].Num_Leftover;
 				}
 			}
 			else{

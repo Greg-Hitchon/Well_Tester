@@ -10,8 +10,8 @@
 #ifndef NAV_FUNCTIONS_H_
 #define NAV_FUNCTIONS_H_
 
-__interrupt void PORT1_ISR(void);
-__interrupt void TIMER1_OTHER_ISR(void);
+//__interrupt void PORT1_ISR(void);
+//__interrupt void TIMER1_OTHER_ISR(void);
 void Restore_State(uint8_t Motor_ID);
 void Set_Timer(void);
 void Set_Motor_Outputs(void);
