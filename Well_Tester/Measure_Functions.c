@@ -14,25 +14,33 @@
 
 //system includes
 #include "Project_Parameters.h"
+#include "Nav_Functions.h"
+#include "Bit_Definitions.h"
+#include "Communication_Functions.h"
 #include TEST_CHIP
 
 #include "cstbool.h"
 
 //macro definitions
 #define TICK_FREQUENCY 			(CLOCK_FREQ/8)
-#define TICK_RESOLUTION 		(50)
-#define PULSE_PERIOD_TICKS 		(0xFFFF)
-#define PULSE_DURATION_TICKS	(20)
-#define CUP_FOUND_TICKS			(1000000UL)
+#define TICK_RESOLUTION 		(10)
+#define PULSE_PERIOD_TICKS 		(100000UL)
+#define PULSE_DURATION_TICKS	(500)
+#define CUP_FOUND_TICKS			(800)
+#define MIN_LEFTOVER_TICKS		(30)
 
 
 //function definitions
 unsigned int cstlog2(unsigned int);
-void Discharge_Cap(unsigned int);
+void Shutdown_Pulses(void);
+void Initialize_Counter(void);
+void Reset_Count(void);
+void Shutdown_Counter(void);
+unsigned long Get_Count(void);
 
 //global variables
-unsigned long gul_Tick_Count, gul_ADC_Total;
-unsigned int gui_Channel, gui_ADC_Count, gui_ADC_Target;
+unsigned long gul_ADC_Total;
+unsigned int gul_Tick_Count, gui_Channel, gui_ADC_Count, gui_ADC_Target, gui_Overflows_Remaining, gui_Overflow_Count, gui_Num_Leftover;
 bool gub_Counter_Running = false, gub_Pulse_Start = false, gub_Pulse_Enabled = false, gub_Start_Count = false;
    
 
@@ -111,57 +119,31 @@ void Initialize_Pulses(void){
 	//enable interrupt
 	P1IE |= BIT_ECHO;
 
+	//get number of overflows
+	gui_Overflow_Count = (unsigned int) (PULSE_PERIOD_TICKS / 0x10000UL);
+	gui_Num_Leftover = (unsigned int) (PULSE_PERIOD_TICKS % 0x10000UL);
+
+	//check and fill remaining overflows
+	if(gui_Num_Leftover < MIN_LEFTOVER_TICKS){
+		gui_Num_Leftover = MIN_LEFTOVER_TICKS;
+	}
+
+	gui_Overflows_Remaining = gui_Overflow_Count;
 
 	//set the pulse width
-	TA1CCR1 = PULSE_PERIOD_TICKS;
-	TA1CCTL1 |= CCIE;
+	TA0CCR1 = gui_Num_Leftover;
+	TA0CCTL1 |= CCIE;
 
 	//initialize trigger bit
 	P1DIR |= BIT_TRIGGER;
 	P1OUT &= ~ BIT_TRIGGER;
-
-	//this toggles between waiting for a pulse length and a full wait
-	gub_Pulse_Start = true;
-	gub_Start_Count = true;
-	gub_Pulse_Enabled = true;
 }
 
-bool Get_Pulse_Status(void){
-	return gub_Pulse_Enabled;
-}
 
-bool Update_Pulse_Tracker(void){
-	if(gub_Start_Count){
-		//reset counter
-		Reset_Count();
-		//configure for falling edge
-		P1IES |= BIT_ECHO;
-		//toggle flag
-		gub_Start_Count = false;
-	}
-	else{
-		if(Get_Count() < CUP_FOUND_TICKS){
-			Shutdown_Pulses();
-			Shutdown_Counter();
-			return true;
-		}
-		else{
-			//rising edge trigger
-			P1IES &= ~BIT_ECHO;
-			gub_Start_Count = true;
-		}
-	}
-}
 
 void Shutdown_Pulses(void){
-	//turn off bool
-	gub_Pulse_Enabled = false;
-
-	//turn off interrupts at echo pin
-	P1IE &= ~BIT_ECHO;
-
 	//turn off pulse width
-	TA1CCTL1 &= ~CCIE;
+	TA0CCTL1 &= ~CCIE;
 }
 //***********************************************************************************************************************************************
 
@@ -170,37 +152,28 @@ void Shutdown_Pulses(void){
 //This controls the timer used to track time
 //***********************************************************************************************************************************************
 void Initialize_Counter(void){
+	//set up pins
+	P1OUT &= ~BIT_ECHO;
+	P1DIR &= ~BIT_ECHO;
+	P1SEL |= BIT_ECHO;
+
+	//set up the compare register
+	TA0CCTL0 = CM_3 | CCIS_0 | SCS | CAP | CCIE;
+
 	//set up timera (continuous mode, source: smclk, clear, interrupts enabled, divide by 8)
 	//Divide by 8 here is necessary as if not used the taccr1 misses the increment
 	//and the frequency is then 1/full clock cycle (65535)
-	TA1CTL = TASSEL_2 | MC_1 | TAIE | TACLR | ID_3;
+	TA0CTL = TASSEL_2 | MC_2 | TACLR | ID_3;
 
-	//set main counter to 0
-	gul_Tick_Count = 0;
-
-	//set up inturrupt period
-	TA1CCR0 = TICK_RESOLUTION;
-	TA1CCTL0 |= CCIE;
-
-	//indicate counter is running
+	//show running
 	gub_Counter_Running = true;
 }
 
 void Shutdown_Counter(void){
-	//disable interrupts
-	TA1CTL &= ~TAIE;
-
-	//indicate counter no longer running
+	TA0CTL = 0;
 	gub_Counter_Running = false;
 }
 
-void Reset_Count(void){
-	gul_Tick_Count = 0;
-}
-
-unsigned long Get_Count(void){
-	return gul_Tick_Count;
-}
 //***********************************************************************************************************************************************
 
 
@@ -235,31 +208,43 @@ __interrupt void ADC_ISR(void){
 }
 
 //this is used for the counter function
-#pragma vector=TIMER1_A0_VECTOR
-__interrupt void TIMER1_CCR0_ISR(void){
-	//increment tick count by 10 to increase performacne (slightly lower resolution
-	 gul_Tick_Count += (TICK_RESOLUTION + 1);
+#pragma vector=TIMER0_A0_VECTOR
+__interrupt void TIMER0_CCR0_ISR(void){
+	static unsigned int Last_Time = 0;
+
+	//check if done
+	if(TA0CCR0 - Last_Time < CUP_FOUND_TICKS){
+		Shutdown_Pulses();
+		Shutdown_Counter();
+		Cup_Found();
+	}
+	//save last time
+	Last_Time = TA0CCR0;
 }
 
 //clear flag here
-#pragma vector=TIMER1_A1_VECTOR
-__interrupt void TIMER1_OTHER_ISR(void){
+#pragma vector=TIMER0_A1_VECTOR
+__interrupt void TIMER0_OTHER_ISR(void){
 	//flags reset by reading ta0iv
-	switch(__even_in_range(TA1IV,0xA)){
+	switch(__even_in_range(TA0IV,0xA)){
 	//pulse period tracker
-	case TA1IV_TACCR1:
+	case TA0IV_TACCR1:
 		if (gub_Pulse_Start){
-			P1OUT |= BIT_TRIGGER;
-			TA1CCR1 += PULSE_DURATION_TICKS;
-			gub_Pulse_Start = false;
+			if(gui_Overflows_Remaining == 0){
+				P1OUT |= BIT_TRIGGER;
+				TA0CCR1 += PULSE_DURATION_TICKS;
+				gub_Pulse_Start = false;
+			}
+			else{
+				gui_Overflows_Remaining--;
+			}
 		}
 		else{
-			P1OUT &= ~ BIT_TRIGGER;
-			TA1CCR1 += PULSE_PERIOD_TICKS;
+			P1OUT &= ~BIT_TRIGGER;
+			TA1CCR1 += gui_Num_Leftover;
 			gub_Pulse_Start = true;
+			gui_Overflows_Remaining = gui_Overflow_Count;
 		}
-		break;
-	case TA1IV_TACCR2:
 	default: break;
 	}
 	//clear flag

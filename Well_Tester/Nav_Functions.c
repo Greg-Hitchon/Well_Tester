@@ -220,7 +220,7 @@ void Create_Nav_Profile(unsigned int Profile_ID,
 
 void Set_Timer(void){
   //continuous mode, overflow interrupt disabled, smclk source, divide by 8
-  TA0CTL = TASSEL_2 | MC_2 | ID_3;
+  TA1CTL = TASSEL_2 | MC_2 | ID_3;
 }
 
 
@@ -413,15 +413,15 @@ void Start_Motor(unsigned int Motor_ID){
 
 	//here we set the bit states specified by the "settings" struct
 	if (Motor_ID & LEFT_MOTOR){
-		TA0CCR1 = s_Cur_Motor_State[LEFT].Num_Leftover;
+		TA1CCR1 = s_Cur_Motor_State[LEFT].Num_Leftover;
 		//start interrupts
-		TA0CCTL1 |= CCIE;
+		TA1CCTL1 |= CCIE;
 	}
 
 	if (Motor_ID & RIGHT_MOTOR){
-		TA0CCR2 = s_Cur_Motor_State[RIGHT].Num_Leftover;
+		TA1CCR2 = s_Cur_Motor_State[RIGHT].Num_Leftover;
 		//start interrupts
-		TA0CCTL2 |= CCIE;
+		TA1CCTL2 |= CCIE;
 	}
 }
 
@@ -678,6 +678,30 @@ void Go_Home(void){
 	}
 }
 
+
+void Cup_Found(void){
+	//updates flags and coords
+	cub_Cup_Found = true;
+
+	//DO EXTRACTION ALGO
+	Extract_Liquid();
+
+	//check if can interrupt
+	if(cub_Can_Go_Home){
+		//update before going home
+		if(s_Cur_Motor_State[CONC_MOTOR-1].Direction & LEFT_FORWARD){
+			Update_XY_Coords(s_Cur_Motor_State[CONC_MOTOR-1].Step_Count,FORWARD);
+		}
+		else{
+			Update_XY_Coords(s_Cur_Motor_State[CONC_MOTOR-1].Step_Count,BACKWARD);
+		}
+		//after adjustment we can just go home
+		Go_Home();
+
+	}
+}
+
+
 //**********************************************************************************************************||
 //Interrupts
 //**********************************************************************************************************||
@@ -686,8 +710,8 @@ void Go_Home(void){
 //**********************************************************************************************************||
 //**********************************************************************************************************||
 
-#pragma vector=TIMER0_A0_VECTOR
-__interrupt void TIMER0_CCRO_ISR(void){
+#pragma vector=TIMER1_A0_VECTOR
+__interrupt void TIMER1_CCRO_ISR(void){
 	//interrupt flags are reset automatically
 	__no_operation();
 }
@@ -695,7 +719,6 @@ __interrupt void TIMER0_CCRO_ISR(void){
 //all port 1 interrupts, controls startup and cup locating
 #pragma vector=PORT1_VECTOR
 __interrupt void PORT1_ISR(void){
-	unsigned long Tick_Count = 0;
 
 	if((P1IFG & BIT_EXTRACT) && cub_Extract_Ready){
 		//disable interrupt
@@ -727,27 +750,6 @@ __interrupt void PORT1_ISR(void){
 		  __delay_cycles(STARTUP_DELAY_TICKS);
 		  __bic_SR_register_on_exit(CPUOFF);
 	  }
-	  else if((P1IFG & BIT_ECHO) & Get_Pulse_Status()){
-		  //flag cup found
-		cub_Cup_Found = true;
-
-		//DO EXTRACTION ALGO
-		Extract_Liquid();
-
-		//check if can interrupt
-		if(cub_Can_Go_Home){
-			//update before going home
-			if(s_Cur_Motor_State[CONC_MOTOR-1].Direction & LEFT_FORWARD){
-				Update_XY_Coords(s_Cur_Motor_State[CONC_MOTOR-1].Step_Count,FORWARD);
-			}
-			else{
-				Update_XY_Coords(s_Cur_Motor_State[CONC_MOTOR-1].Step_Count,BACKWARD);
-			}
-			//after adjustment we can just go home
-			Go_Home();
-
-		}
-	  }
 
 	  //clear fgs
 	  P1IFG = 0x0;
@@ -755,22 +757,22 @@ __interrupt void PORT1_ISR(void){
 
 //clear flag here, also updates the motors
 
-#pragma vector=TIMER0_A1_VECTOR
-__interrupt void TIMER0_OTHER_ISR(void){
+#pragma vector=TIMER1_A1_VECTOR
+__interrupt void TIMER1_OTHER_ISR(void){
 	//bit flag
 	unsigned int ui_Motor_Index;
 	bool b_Do_Update = false;
 
 	//flags reset by reading ta0iv
-	switch(__even_in_range(TA0IV,0xA)){
-	case TA0IV_TACCR1:
+	switch(__even_in_range(TA1IV,0xA)){
+	case TA1IV_TACCR1:
 		//flag update needed
 		b_Do_Update = true;
 		//assign index
 		ui_Motor_Index = LEFT;
 
 		break;
-	case TA0IV_TACCR2:
+	case TA1IV_TACCR2:
 		//flag update needed
 		b_Do_Update = true;
 		//assign index
@@ -852,8 +854,8 @@ __interrupt void TIMER0_OTHER_ISR(void){
 
 				if(s_Cur_Motor_State[ui_Motor_Index].Is_Concurrent){
 					//turn off both interrupts
-					TA0CCTL1 &= ~CCIE;
-					TA0CCTL2 &= ~CCIE;
+					TA1CCTL1 &= ~CCIE;
+					TA1CCTL2 &= ~CCIE;
 					//reset motor struct
 					Clear_State(BOTH_MOTORS);
 				}
@@ -862,10 +864,10 @@ __interrupt void TIMER0_OTHER_ISR(void){
 					Clear_State(ui_Motor_Index + 1);
 					//turn off interrupts
 					if(ui_Motor_Index == LEFT){
-						TA0CCTL1 &= ~CCIE;
+						TA1CCTL1 &= ~CCIE;
 					}
 					else{
-						TA0CCTL2 &= ~CCIE;
+						TA1CCTL2 &= ~CCIE;
 					}
 				}
 

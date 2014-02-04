@@ -45,7 +45,7 @@
 #define BIT_ALL_MOTORS		        (0xFF)
 
 #define BIT_TRIGGER					(BIT6)
-#define BIT_ECHO					(BIT7)
+#define BIT_ECHO					(BIT1)
 //(BIT_LEFT_MOTOR+BIT_RIGHT_MOTOR)
 
 #define SWEEP						(0x1)

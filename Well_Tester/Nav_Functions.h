@@ -11,7 +11,7 @@
 #define NAV_FUNCTIONS_H_
 
 __interrupt void PORT1_ISR(void);
-__interrupt void TIMER0_OTHER_ISR(void);
+__interrupt void TIMER1_OTHER_ISR(void);
 void Restore_State(unsigned int Motor_ID);
 void Set_Timer(void);
 void Set_Motor_Outputs(void);
@@ -40,6 +40,7 @@ void Set_Motor(	unsigned int Motor_ID,
 
 void Initialize_Bits(void);
 void Initialize_Tracking(void);
+void Cup_Found(void);
 void Go_Home(void);
 void Set_Up_Extraction(void);
 void Wait_For_Startup(void);

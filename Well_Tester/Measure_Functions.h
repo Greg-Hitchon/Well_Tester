@@ -19,6 +19,8 @@ unsigned long Frequency_Read(unsigned int Channel,
 
 void Get_Result(void);
 void Reset_Count(void);
-
+void Initialize_Pulses(void);
+bool Get_Pulse_Status(void);
+bool Update_Pulse_Tracker(void);
                 
 #endif /* MEASURE_FUNCTIONS_H_ */
