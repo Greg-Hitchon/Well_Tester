@@ -97,13 +97,14 @@ void main(void) {
 		//final
 		///Wait_For_Startup();
 		//Set_Up_Extraction();
-		//Initialize_Pulses();
-		//for(;;){}
+		Initialize_Pulses();
 		Initialize_Bits();
 		Initialize_Tracking();
 		Create_Nav_Profile(0,4000,5500,4000,10,10,1,1);
-		//Straight(FORWARD,TABLE_LENGTH_STEPS,0);
-		Final_Run();
+		P2OUT = 0;
+		P2DIR = 0;
+		//Final_Run();
+		for(;;){}
 	}
 	//____________________________
   

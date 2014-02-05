@@ -29,8 +29,8 @@
 //macro definitions
 #define TICK_FREQUENCY 			(CLOCK_FREQ/8)
 #define TICK_RESOLUTION 		(10)
-#define PULSE_PERIOD_TICKS 		(100000UL)
-#define PULSE_DURATION_TICKS	(500)
+#define PULSE_PERIOD_TICKS 		(400000UL)
+#define PULSE_DURATION_TICKS	(2000)
 #define CUP_FOUND_TICKS			(800)
 #define MIN_LEFTOVER_TICKS		(30)
 
@@ -111,13 +111,6 @@ void Initialize_Pulses(void){
 	if(!gub_Counter_Running){
 		Initialize_Counter();
 	}
-
-	//set up interrupts for the echo pin
-	P1DIR &= ~BIT_ECHO;
-	//rising edge trigger
-	P1IES &= ~BIT_ECHO;
-	//enable interrupt
-	P1IE |= BIT_ECHO;
 
 	//get number of overflows
 	gui_Overflow_Count = UINT16_C(PULSE_PERIOD_TICKS / 0x10000UL);
@@ -214,9 +207,9 @@ __interrupt void TIMER0_CCR0_ISR(void){
 
 	//check if done
 	if(TA0CCR0 - Last_Time < CUP_FOUND_TICKS){
-		Shutdown_Pulses();
-		Shutdown_Counter();
-		Cup_Found();
+		//Shutdown_Pulses();
+		//Shutdown_Counter();
+		//Cup_Found();
 	}
 	//save last time
 	Last_Time = TA0CCR0;
