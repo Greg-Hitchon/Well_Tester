@@ -42,8 +42,8 @@ void Initialize_Bits(void);
 void Initialize_Tracking(void);
 void Cup_Found(void);
 void Go_Home(void);
-void Set_Up_Extraction(void);
 void Wait_For_Startup(void);
+void Hold_Until_Finished(void);
 void Update_XY_Coords(uint32_t Steps, uint8_t Direction);
 
 #endif /* NAV_FUNCTIONS_H_ */

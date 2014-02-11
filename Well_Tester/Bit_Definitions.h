@@ -10,10 +10,9 @@
 #ifndef BIT_DEFINITIONS_H_
 #define BIT_DEFINITIONS_H_
 
-#define BIT_EXTRACT                     (0x10)
 #define BIT_STARTUP						(0x08)
 #define BIT_TXD                         (0x04)
-#define LED_RED							(0x40)
+#define LED_RED							(0x01)
 #define LED_GREEN						(0x80)
 
 #define LEFT			 				(0x0)

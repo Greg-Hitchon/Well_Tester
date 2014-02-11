@@ -15,6 +15,7 @@ void Square();
 void Line();
 void Do_Sensing(void);
 
+
 /*
  * main.c
  *
@@ -96,15 +97,14 @@ void main(void) {
 
 		//final
 		///Wait_For_Startup();
-		//Set_Up_Extraction();
 		Initialize_Pulses();
 		Initialize_Bits();
 		Initialize_Tracking();
 		Create_Nav_Profile(0,4000,5500,4000,10,10,1,1);
-		P2OUT = 0;
-		P2DIR = 0;
-		//Final_Run();
-		for(;;){}
+		//P2OUT = 0;
+		//P2DIR = 0;
+		Final_Run();
+		Hold_Until_Finished();
 	}
 	//____________________________
   

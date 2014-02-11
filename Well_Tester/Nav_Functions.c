@@ -723,31 +723,7 @@ void Cup_Found(void){
 #pragma vector=PORT1_VECTOR
 __interrupt void PORT1_ISR(void){
 
-	if((P1IFG & BIT_EXTRACT) && cub_Extract_Ready){
-		//disable interrupt
-		P1IE &= ~BIT_EXTRACT;
-
-		//flag cup found
-		cub_Cup_Found = true;
-
-		//DO EXTRACTION ALGO
-		Extract_Liquid();
-
-		//check if can interrupt
-		if(cub_Can_Go_Home){
-			//update before going home
-			if(s_Cur_Motor_State[CONC_MOTOR-1].Direction & LEFT_FORWARD){
-				Update_XY_Coords(s_Cur_Motor_State[CONC_MOTOR-1].Step_Count,FORWARD);
-			}
-			else{
-				Update_XY_Coords(s_Cur_Motor_State[CONC_MOTOR-1].Step_Count,BACKWARD);
-			}
-			//after adjustment we can just go home
-			Go_Home();
-
-		}
-	  }
-	  else if(P1IFG & BIT_STARTUP){
+	  if(P1IFG & BIT_STARTUP){
 		  //Print_String("\n\nStarting Program Execution...\r\n\n");
 		  P1OUT &= ~LED_RED;
 		  __delay_cycles(STARTUP_DELAY_TICKS);

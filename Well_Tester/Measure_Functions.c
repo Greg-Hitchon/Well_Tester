@@ -30,9 +30,10 @@
 #define TICK_FREQUENCY 			(CLOCK_FREQ/8)
 #define TICK_RESOLUTION 		(10)
 #define PULSE_PERIOD_TICKS 		(400000UL)
-#define PULSE_DURATION_TICKS	(2000)
-#define CUP_FOUND_TICKS			(800)
+#define PULSE_DURATION_TICKS	(20)
+#define CUP_FOUND_TICKS			(25000)
 #define MIN_LEFTOVER_TICKS		(30)
+#define NUM_PULSE_AVG			(10)
 
 
 //function definitions
@@ -47,7 +48,7 @@ uint32_t Get_Count(void);
 uint32_t gul_ADC_Total;
 uint16_t gul_Tick_Count, gui_ADC_Count, gui_ADC_Target, gui_Overflows_Remaining, gui_Overflow_Count, gui_Num_Leftover;
 uint8_t gui_Channel;
-bool gub_Counter_Running = false, gub_Pulse_Start = false, gub_Pulse_Enabled = false, gub_Start_Count = false;
+bool gub_Counter_Running = false, gub_Pulse_Start = false;
    
 
 void Get_Result(void){
@@ -156,7 +157,7 @@ void Initialize_Counter(void){
 	//set up timera (continuous mode, source: smclk, clear, interrupts enabled, divide by 8)
 	//Divide by 8 here is necessary as if not used the taccr1 misses the increment
 	//and the frequency is then 1/full clock cycle (65535)
-	TA0CTL = TASSEL_2 | MC_2 | TACLR | ID_3;
+	TA0CTL = TASSEL_2 | MC_2 | TACLR | ID_2;
 
 	//show running
 	gub_Counter_Running = true;
@@ -203,16 +204,61 @@ __interrupt void ADC_ISR(void){
 //this is used for the counter function
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void TIMER0_CCR0_ISR(void){
-	static uint16_t Last_Time = 0;
+	static uint32_t Time_Sum = 0;
+	static uint16_t Time_Track[NUM_PULSE_AVG] = {0}, Last_Time = 0, Tmp_Time;
+	static uint8_t Time_Ind=0, Last_Ind;
+	static bool Pulse_Start = true, Test_Pulse = false, Valid_Edge = true;
 
-	//check if done
-	if(TA0CCR0 - Last_Time < CUP_FOUND_TICKS){
-		//Shutdown_Pulses();
-		//Shutdown_Counter();
-		//Cup_Found();
-	}
-	//save last time
-	Last_Time = TA0CCR0;
+		//actualy do store/test
+		if(!Pulse_Start){
+			//update the current value of the timer right away
+			Tmp_Time = TA0CCR0;
+
+			if(Valid_Edge){
+				//toggle flab
+				Valid_Edge = false;
+				//very first thing we do is subtract the current value of the track array from the sum
+				Last_Ind = Time_Ind;
+				Time_Sum -= UINT32_C(Time_Track[Last_Ind]);
+
+				Time_Track[Last_Ind] = Tmp_Time - Last_Time;
+				Time_Sum += UINT32_C(Time_Track[Last_Ind]);
+
+				//get new index
+				if(++Time_Ind == NUM_PULSE_AVG){
+					//reset the index
+					Time_Ind = 0;
+					//make sure that we only do a sum if this code has executed at least once
+					if(!Test_Pulse){
+						Test_Pulse = true;
+					}
+				}
+
+				//here we update the sum
+				if(Test_Pulse){
+					//check if done
+					if(Time_Sum < CUP_FOUND_TICKS){
+						Shutdown_Pulses();
+						Shutdown_Counter();
+						for(;;){}
+						Cup_Found();
+					}
+				}
+			}
+			else{
+				//toggle flag
+				Valid_Edge = true;
+			}
+
+			//save the last time
+			Last_Time = Tmp_Time;
+		}
+		else{
+			//toggle flag
+			Pulse_Start = false;
+			//update the starting time
+			Last_Time = TA0CCR0;
+		}
 }
 
 //clear flag here
