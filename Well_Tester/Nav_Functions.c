@@ -27,8 +27,6 @@
 #include "cstbool.h"
 
 //function prototypes
-void Clear_State(uint8_t Motor_ID);
-void Save_State(uint8_t Motor_ID);
 void Set_Motor(	uint8_t Motor_ID,
 				uint8_t Direction,
 				uint32_t Steps,
@@ -98,7 +96,7 @@ uint8_t caui_State_Direction[2]={FORWARD}, caui_Orientation[4]={NORTH,EAST,SOUTH
 uint16_t cui_X_Steps, cui_Y_Steps;
 uint8_t cui_Orientation_Index;
 
-bool cub_Extract_Ready = false, cub_Can_Go_Home = false, cub_Cup_Found = false;
+bool cub_Can_Go_Home = false, cub_Cup_Found = false;
 
 //**********************************************************************************************************||
 //core functions
@@ -107,20 +105,6 @@ bool cub_Extract_Ready = false, cub_Can_Go_Home = false, cub_Cup_Found = false;
 //included functions set up motors parameters, save the current state, and restore the saved state
 //**********************************************************************************************************||
 //**********************************************************************************************************||
-
-//this is just another step in the initialization, split up just for modularity
-void Set_Up_Extraction(void){
-	//*******************************
-	//set extract bit to input
-	P1DIR &= ~BIT_EXTRACT;
-	//falling edge trigger
-	P1IES |= BIT_EXTRACT;
-	//enable interrupt
-	P1IE |= BIT_EXTRACT;
-	//set global flag
-	cub_Extract_Ready = true;
-	//*******************************
-}
 
 //just waits for a startup on some port 1 pin
 void Wait_For_Startup(void){
@@ -355,7 +339,7 @@ void Clear_State(uint8_t Motor_ID){
 
 //updates bits, takes either motor or both
 void Update_State(uint8_t Motor_Index){
-	uint8_t Bit_Total = 0, i, Motor_ID;
+	uint8_t Bit_Total = 0, i, Motor_ID = 0;
 	bool ba_Is_Backwards[2]={false};
 
 
@@ -724,7 +708,7 @@ void Cup_Found(void){
 __interrupt void PORT1_ISR(void){
 
 	  if(P1IFG & BIT_STARTUP){
-		  //Print_String("\n\nStarting Program Execution...\r\n\n");
+		  //this little routine just responds to the startup pin event by
 		  P1OUT &= ~LED_RED;
 		  __delay_cycles(STARTUP_DELAY_TICKS);
 		  __bic_SR_register_on_exit(CPUOFF);
@@ -838,7 +822,7 @@ __interrupt void TIMER1_OTHER_ISR(void){
 				}
 			}
 			else{
-
+				//if we get here current command is done so turn off necessary motors
 				if(s_Cur_Motor_State[ui_Motor_Index].Is_Concurrent){
 					//turn off both interrupts
 					TA1CCTL1 &= ~CCIE;

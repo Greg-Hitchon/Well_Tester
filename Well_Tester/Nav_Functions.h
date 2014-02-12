@@ -10,12 +10,18 @@
 #ifndef NAV_FUNCTIONS_H_
 #define NAV_FUNCTIONS_H_
 
-//__interrupt void PORT1_ISR(void);
-//__interrupt void TIMER1_OTHER_ISR(void);
-void Restore_State(uint8_t Motor_ID);
 void Set_Timer(void);
-void Set_Motor_Outputs(void);
+void Initialize_Bits(void);
+void Initialize_Tracking(void);
+void Cup_Found(void);
+void Go_Home(void);
+void Wait_For_Startup(void);
+void Hold_Until_Finished(void);
 void Start_Motor(uint8_t Motor_ID);
+
+void Update_XY_Coords(uint32_t Steps,
+					uint8_t Direction);
+
 void Straight(	uint8_t Direction,
 				uint32_t Steps,
 				uint8_t Profile_ID);
@@ -38,12 +44,5 @@ void Set_Motor(	uint8_t Motor_ID,
 				uint32_t Steps,
 				uint8_t Profile_ID);
 
-void Initialize_Bits(void);
-void Initialize_Tracking(void);
-void Cup_Found(void);
-void Go_Home(void);
-void Wait_For_Startup(void);
-void Hold_Until_Finished(void);
-void Update_XY_Coords(uint32_t Steps, uint8_t Direction);
 
 #endif /* NAV_FUNCTIONS_H_ */

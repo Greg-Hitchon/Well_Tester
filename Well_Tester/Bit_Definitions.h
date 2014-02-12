@@ -13,7 +13,6 @@
 #define BIT_STARTUP						(0x08)
 #define BIT_TXD                         (0x04)
 #define LED_RED							(0x01)
-#define LED_GREEN						(0x80)
 
 #define LEFT			 				(0x0)
 #define RIGHT 							(0x1)
@@ -36,14 +35,6 @@
 #define BOTH_BACKWARD		        (RIGHT_BACKWARD+LEFT_BACKWARD)
 #define TURN_LEFT					(LEFT_BACKWARD+RIGHT_FORWARD)
 #define TURN_RIGHT					(LEFT_FORWARD+RIGHT_BACKWARD)
-
-#define BIT_MLA         	        (0x2)
-#define BIT_MLB         	        (0x4)
-#define BIT_MRA         	        (0x8)
-#define BIT_MRB         	        (0x10)
-#define BIT_LEFT_MOTOR		        (BIT_MLA+BIT_MLB)
-#define BIT_RIGHT_MOTOR		        (BIT_MRA+BIT_MRB)
-#define BIT_ALL_MOTORS		        (0xFF)
 
 #define BIT_TRIGGER					(BIT6)
 #define BIT_ECHO					(BIT1)
