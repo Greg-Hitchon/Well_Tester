@@ -36,6 +36,7 @@ void Hold_Until_Finished(void);
 void Update_State(uint8_t Motor_ID);
 void Go_Home(void);
 void Update_XY_Coords(uint32_t Steps, uint8_t Direction);
+void Clear_State(uint8_t Motor_ID);
 
 
 //core preprocessor constants (distance in 0.1mm, frequency in KHz, time is in 1/100(seconds))
@@ -43,8 +44,6 @@ void Update_XY_Coords(uint32_t Steps, uint8_t Direction);
 #define MIN_TICK_INCREMENT		(1000)
 #define NUM_STATES				(8)
 #define NUM_MOTORS				(2)
-#define STEPS_PER_SWEEP 		(665)
-#define STEPS_PER_DIME 			(335)
 #define STEPS_Y_ADJUST			(150)
 
 
@@ -60,6 +59,7 @@ void Update_XY_Coords(uint32_t Steps, uint8_t Direction);
 //This configuration implies:
 //Motor 1: a=Bit0, a'=Bit2; b=Bit1, b'=Bit3
 //Motor 2: a=Bit4, a'=Bit6; b=Bit5, b'=Bit7
+const uint16_t cau16_Orientation[4]={NORTH,EAST,SOUTH,WEST};
 const uint8_t cch_State_Map[NUM_MOTORS][NUM_STATES] = {{BIT0,BIT3,BIT1,BIT0,BIT2,BIT1,BIT3,BIT2},{BIT4,BIT7,BIT5,BIT4,BIT6,BIT5,BIT7,BIT6}};
 
 
@@ -67,7 +67,8 @@ const uint8_t cch_State_Map[NUM_MOTORS][NUM_STATES] = {{BIT0,BIT3,BIT1,BIT0,BIT2
 //**********************************************************************************************************||
 
 //structs
-//Note:  step target is needed because we are counting up not down.  This is for code clarity.
+
+//contains info for each motor when given a nav profile as well as a specific step count, number in memory is 2, one for each motoor
 //Mem: ~50Bytes
 struct Motor_State {
 	uint32_t Step_Target, Step_Count, Tick_Total;
@@ -76,6 +77,7 @@ struct Motor_State {
 	bool Is_Running, Has_ACC, Has_DEC, Is_Concurrent;
 };
 
+//contains info about the acc/dec profiles and speed, number is controlled by global definition
 //Mem: ~30Bytes
 struct Nav_Profile{
 	uint32_t Period;
@@ -84,19 +86,25 @@ struct Nav_Profile{
 	bool Has_DEC, Has_ACC;
 };
 
+//contains info used to track position of the robot, not necessary as only 1 in memory but makes code clearer
+struct Track_Info{
+	uint16_t X_Steps, Y_Steps, Z_Steps;
+	uint8_t Orientation_Index, Turn_Type, Turn_Direction, Profile_ID;
+	bool Is_Turning;
+};
+
+//inititialize the declared structss
 struct Motor_State s_Cur_Motor_State[NUM_MOTORS];
-//struct Motor_State s_Sv_Motor_State[2];
 struct Nav_Profile s_Nav_Profiles[NUM_NAV_PROFILES];
+struct Track_Info s_Track_Info;
+
 
 //variables
-//Mem: ~20 Bytes
+//Mem: ~10 Bytes
 uint16_t caui_Last_State[2] ={NUM_STATES+1};
-uint8_t caui_State_Direction[2]={FORWARD}, caui_Orientation[4]={NORTH,EAST,SOUTH,WEST};
+uint8_t caui_State_Direction[2]={FORWARD};
 
-uint16_t cui_X_Steps, cui_Y_Steps;
-uint8_t cui_Orientation_Index;
-
-bool cub_Can_Go_Home = false, cub_Cup_Found = false;
+bool cub_Cup_Found = false;
 
 //**********************************************************************************************************||
 //core functions
@@ -129,11 +137,11 @@ void Wait_For_Startup(void){
 //north is along positive y axis, east along positive x axis
 void Initialize_Tracking(void){
 	//set initial x and y coords
-	cui_X_Steps = TABLE_WIDTH_STEPS + 2*STEPS_XY_PER_SWEEP;
-	cui_Y_Steps = 0;
+	s_Track_Info.X_Steps = TABLE_WIDTH_STEPS + 2*STEPS_XY_PER_SWEEP;
+	s_Track_Info.Y_Steps = 0;
 
 	//set initial orientation
-	cui_Orientation_Index = 0;
+	s_Track_Info.Orientation_Index = 0;
 }
 
 //sets the state to 0 state
@@ -428,40 +436,49 @@ void Hold_Until_Finished(void){
 //**********************************************************************************************************||
 //these functions just package the basic functions into easier to use forms with common constants supplied
 //for typical behaviour (turn (left/right), straight (backwards/forwards)
+//NOTE: the coords are updated everytime for a full turn...this is because if interrupted the turn is still finished
+//with the remaining steps
 //**********************************************************************************************************||
 //**********************************************************************************************************||
 
 void Turn(	uint8_t Direction,
 			uint8_t Profile_ID,
-			uint8_t Type){
-	//cant break out of a turn
-	cub_Can_Go_Home = false;
+			uint8_t Type,
+			uint32_t Steps){
 
+	//to reverse turn mid-turn we need the direction and type
+	s_Track_Info.Is_Turning = true;
+	s_Track_Info.Turn_Direction = Direction;
+	s_Track_Info.Turn_Type = Type;
+	s_Track_Info.Profile_ID = Profile_ID;
+
+
+	//Actually do turn
 	if(Type == SWEEP){
-		//because we cant go home in middle of execution can update x/y before actual movement
-		Update_XY_Coords(STEPS_XY_PER_SWEEP, FORWARD);
-
 		//actually set motors
 		if(Direction == LEFT){
-			Set_Motor(RIGHT_MOTOR, FORWARD, STEPS_PER_SWEEP, Profile_ID);
+			Set_Motor(RIGHT_MOTOR, FORWARD, Steps, Profile_ID);
 			Start_Motor(RIGHT_MOTOR);
 			Hold_Until_Finished();
 		}
 		else{
-			Set_Motor(LEFT_MOTOR, FORWARD, STEPS_PER_SWEEP, Profile_ID);
+			Set_Motor(LEFT_MOTOR, FORWARD, Steps, Profile_ID);
 			Start_Motor(LEFT_MOTOR);
 			Hold_Until_Finished();
 		}
+
+		//For the sweep we need to update the Y direction and X direction, this does one (could be either x or y)
+		Update_XY_Coords(STEPS_XY_PER_SWEEP, FORWARD);
 	}
 	else{
 		//actually set motors
 		if(Direction == LEFT){
-			Set_Motor(BOTH_MOTORS,TURN_LEFT,STEPS_PER_DIME, Profile_ID);
+			Set_Motor(BOTH_MOTORS,TURN_LEFT,Steps, Profile_ID);
 			Start_Motor(BOTH_MOTORS);
 			Hold_Until_Finished();
 		}
 		else{
-			Set_Motor(BOTH_MOTORS,TURN_RIGHT,STEPS_PER_DIME, Profile_ID);
+			Set_Motor(BOTH_MOTORS,TURN_RIGHT,Steps, Profile_ID);
 			Start_Motor(BOTH_MOTORS);
 			Hold_Until_Finished();
 		}
@@ -469,40 +486,34 @@ void Turn(	uint8_t Direction,
 
 	//adjust the orientation
 	if(Direction == LEFT){
-		if(cui_Orientation_Index == 0){
-			cui_Orientation_Index = 3;
+		if(s_Track_Info.Orientation_Index == 0){
+			s_Track_Info.Orientation_Index = 3;
 		}
 		else{
-			cui_Orientation_Index--;
+			s_Track_Info.Orientation_Index--;
 		}
 	}
 	else{
-		if(cui_Orientation_Index == 3){
-			cui_Orientation_Index = 0;
+		if(s_Track_Info.Orientation_Index == 3){
+			s_Track_Info.Orientation_Index = 0;
 		}
 		else{
-			cui_Orientation_Index++;
+			s_Track_Info.Orientation_Index++;
 		}
 	}
 
 	//a little messy but if we are doing a sweep we need to update xy again after orientation update as it moves in both x and y
 	if(Type == SWEEP){
-		//because we cant go home in middle of execution can update x/y before actual movement
+		//this updates the other index (either x or y) after the orienteation has  been updated
 		Update_XY_Coords(STEPS_XY_PER_SWEEP, FORWARD);
 	}
-
-	//check if can go home after turn is done
-	if(cub_Cup_Found){
-		Go_Home();
-	}
-
 }
 
 void Straight(	uint8_t Direction,
 				uint32_t Steps,
 				uint8_t Profile_ID){
-	//can break out of a straigt line
-	cub_Can_Go_Home = true;
+	//indicate not turning here so know to update xy not turn info
+	s_Track_Info.Is_Turning = false;
 
 	//actually set motors
 	if (Direction == FORWARD){
@@ -516,65 +527,63 @@ void Straight(	uint8_t Direction,
 		Hold_Until_Finished();
 	}
 
-	//reset just in case
-	cub_Can_Go_Home = false;
-
 	//update the coords
 	Update_XY_Coords(Steps, Direction);
 }
 
-void Update_XY_Coords(uint32_t Steps, uint8_t Direction){
+void Update_XY_Coords(uint32_t Steps,
+						uint8_t Direction){
 
 	if(Direction == FORWARD){
 		//adjust the coords based on steps taken in current movement
-		switch (caui_Orientation[cui_Orientation_Index]){
+		switch (cau16_Orientation[s_Track_Info.Orientation_Index]){
 		case NORTH:
-			cui_Y_Steps += Steps;
+			s_Track_Info.Y_Steps += Steps;
 			break;
 		case EAST:
-			cui_X_Steps += Steps;
+			s_Track_Info.X_Steps += Steps;
 			break;
 		case SOUTH:
-			if(cui_Y_Steps >= Steps){
-				cui_Y_Steps -= Steps;
+			if(s_Track_Info.Y_Steps >= Steps){
+				s_Track_Info.Y_Steps -= Steps;
 			}
 			else{
-				cui_Y_Steps = 0;
+				s_Track_Info.Y_Steps = 0;
 			}
 			break;
 		case WEST:
-			if(cui_X_Steps >= Steps){
-				cui_X_Steps -= Steps;
+			if(s_Track_Info.X_Steps >= Steps){
+				s_Track_Info.X_Steps -= Steps;
 			}
 			else{
-				cui_X_Steps = 0;
+				s_Track_Info.X_Steps = 0;
 			}
 		}
 	}
 	else if (Direction == BACKWARD){
 		//adjust the coords based on steps taken in current movement
-		switch (caui_Orientation[cui_Orientation_Index]){
+		switch (cau16_Orientation[s_Track_Info.Orientation_Index]){
 		case NORTH:
-			if(cui_Y_Steps >= Steps){
-				cui_Y_Steps -= Steps;
+			if(s_Track_Info.Y_Steps >= Steps){
+				s_Track_Info.Y_Steps -= Steps;
 			}
 			else{
-				cui_Y_Steps = 0;
+				s_Track_Info.Y_Steps = 0;
 			}
 			break;
 		case EAST:
-			if(cui_X_Steps >= Steps){
-				cui_X_Steps -= Steps;
+			if(s_Track_Info.X_Steps >= Steps){
+				s_Track_Info.X_Steps -= Steps;
 			}
 			else{
-				cui_X_Steps = 0;
+				s_Track_Info.X_Steps = 0;
 			}
 			break;
 		case SOUTH:
-			cui_Y_Steps += Steps;
+			s_Track_Info.Y_Steps += Steps;
 			break;
 		case WEST:
-			cui_X_Steps += Steps;
+			s_Track_Info.X_Steps += Steps;
 		}
 	}
 }
@@ -586,22 +595,28 @@ void Go_Home(void){
 	cub_Cup_Found = false;
 
 	//because we need to have sufficient turning radius we need to decrement y by the turning radius
-	if(cui_Y_Steps>=STEPS_Y_ADJUST){
-		cui_Y_Steps -= STEPS_Y_ADJUST;
+	if(s_Track_Info.Y_Steps>=STEPS_Y_ADJUST){
+		s_Track_Info.Y_Steps -= STEPS_Y_ADJUST;
 	}
 
+	//if we were turning we need to complete the turn (could adjust to turn back if more efficient but leave it as just finishing the turn for now)
+	if(s_Track_Info.Is_Turning && s_Track_Info.Z_Steps > 0){
+		Turn(s_Track_Info.Turn_Direction, s_Track_Info.Profile_ID, s_Track_Info.Turn_Type, s_Track_Info.Z_Steps);
+	}
+
+
 	//reorient
-	switch(caui_Orientation[cui_Orientation_Index]){
+	switch(cau16_Orientation[s_Track_Info.Orientation_Index]){
 	case NORTH:
 		//get to x direction
-		Turn(LEFT,0,DIME);
+		Turn(LEFT,0,DIME,STEPS_PER_DIME);
 		//do x translation
-		Straight(FORWARD,cui_X_Steps,0);
+		Straight(FORWARD,s_Track_Info.X_Steps,0);
 
 		//get to y direction
-		Turn(LEFT,0,DIME);
+		Turn(LEFT,0,DIME,STEPS_PER_DIME);
 		//do y translation
-		Straight(FORWARD,cui_Y_Steps,0);
+		Straight(FORWARD,s_Track_Info.Y_Steps,0);
 
 		//get result from sensing unit
 		Get_Result();
@@ -613,14 +628,14 @@ void Go_Home(void){
 		//break;
 	case EAST:
 		//get to y direction
-		Turn(RIGHT,0,DIME);
+		Turn(RIGHT,0,DIME, STEPS_PER_DIME);
 		//do y translation
-		Straight(FORWARD,cui_Y_Steps,0);
+		Straight(FORWARD,s_Track_Info.Y_Steps,0);
 
 		//get to x direction
-		Turn(RIGHT,0,DIME);
+		Turn(RIGHT,0,DIME, STEPS_PER_DIME);
 		//do x translation
-		Straight(FORWARD, cui_X_Steps,0);
+		Straight(FORWARD, s_Track_Info.X_Steps,0);
 
 		//get result from sensing unit
 		Get_Result();
@@ -632,13 +647,13 @@ void Go_Home(void){
 		//break;
 	case SOUTH:
 		//do y translation
-		Straight(FORWARD,cui_Y_Steps,0);
+		Straight(FORWARD,s_Track_Info.Y_Steps,0);
 
-		if(cui_X_Steps > 0){
+		if(s_Track_Info.X_Steps > 0){
 			//get to x direction
-			Turn(RIGHT,0,DIME);
+			Turn(RIGHT,0,DIME, STEPS_PER_DIME);
 			//do x translation
-			Straight(FORWARD, cui_X_Steps,0);
+			Straight(FORWARD, s_Track_Info.X_Steps,0);
 		}
 
 		//get result from sensing unit
@@ -651,13 +666,13 @@ void Go_Home(void){
 		//break;
 	case WEST:
 		//do x translation
-		Straight(FORWARD,cui_X_Steps,0);
+		Straight(FORWARD,s_Track_Info.X_Steps,0);
 
-		if(cui_Y_Steps>0){
+		if(s_Track_Info.Y_Steps>0){
 			//get to y direction
-			Turn(LEFT,0,DIME);
+			Turn(LEFT,0,DIME,STEPS_PER_DIME);
 			//do y translation
-			Straight(FORWARD, cui_Y_Steps,0);
+			Straight(FORWARD, s_Track_Info.Y_Steps,0);
 		}
 
 		//get result from sensing unit
@@ -675,11 +690,8 @@ void Cup_Found(void){
 	//updates flags and coords
 	cub_Cup_Found = true;
 
-	//DO EXTRACTION ALGO
-	Extract_Liquid();
-
-	//check if can interrupt
-	if(cub_Can_Go_Home){
+	//update the tracking info with current movement so we can get home
+	if(!s_Track_Info.Is_Turning){
 		//update before going home
 		if(s_Cur_Motor_State[CONC_MOTOR-1].Direction & LEFT_FORWARD){
 			Update_XY_Coords(s_Cur_Motor_State[CONC_MOTOR-1].Step_Count,FORWARD);
@@ -687,10 +699,24 @@ void Cup_Found(void){
 		else{
 			Update_XY_Coords(s_Cur_Motor_State[CONC_MOTOR-1].Step_Count,BACKWARD);
 		}
-		//after adjustment we can just go home
-		Go_Home();
+	}
+	else{
+		//here we just need the steps remaining, need to determine which motor has info.
+		//if dime then can get from either, if sweep only one is running and has the step info
+		if(s_Cur_Motor_State[LEFT].Is_Running){
+			s_Track_Info.Z_Steps = s_Cur_Motor_State[LEFT].Step_Target - s_Cur_Motor_State[LEFT].Step_Count;
+		}
+		else{
+			s_Track_Info.Z_Steps = s_Cur_Motor_State[RIGHT].Step_Target - s_Cur_Motor_State[RIGHT].Step_Count;
+		}
 
 	}
+
+	//DO EXTRACTION ALGO (can move car here
+	Extract_Liquid();
+
+	//after adjustment we can just go home
+	Go_Home();
 }
 
 

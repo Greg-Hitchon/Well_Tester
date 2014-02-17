@@ -19,7 +19,7 @@ void Wait_For_Startup(void);
 void Hold_Until_Finished(void);
 void Start_Motor(uint8_t Motor_ID);
 
-void Update_XY_Coords(uint32_t Steps,
+void Update_Track_Info(uint32_t Steps,
 					uint8_t Direction);
 
 void Straight(	uint8_t Direction,
@@ -28,7 +28,8 @@ void Straight(	uint8_t Direction,
 
 void Turn(	uint8_t Direction,
 			uint8_t Profile_ID,
-			uint8_t Type);
+			uint8_t Type,
+			uint32_t Steps);
 
 void Create_Nav_Profile(uint8_t Profile_ID,
 						uint16_t Start_Speed,

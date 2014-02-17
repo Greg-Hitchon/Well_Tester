@@ -10,6 +10,8 @@
 #define			GRID_STEPS				160
 #define 		LIGHT_THRESHOLD			700
 #define			VOLATILE_THRESHOLD		50
+#define 		STEPS_PER_SWEEP 		665
+#define 		STEPS_PER_DIME 			335
 
 
 #endif

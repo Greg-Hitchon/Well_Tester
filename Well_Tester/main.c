@@ -119,12 +119,6 @@ void Do_Sensing(void){
 	bool b_Is_Light = false, b_Is_Volatile = false;
 	uint16_t Avg_Cond_Value, Avg_Light_Value, i, ui_Last_Cond, ui_Current_Cond, ui_Max_Diff = 0;;
 
-	//display test mode
-		for(i=0;i<5;i++){
-			P1DIR |= LED_GREEN;
-			P1OUT ^= LED_GREEN;
-			__delay_cycles(4000000);
-		}
 	//add in a few lines to differentiate
 		Print_String("\r\n\r\n");
 	//delay for 30s
@@ -266,7 +260,7 @@ void Square()
 		//Stright from start then turn left
 		Straight(FORWARD,TABLE_LENGTH_STEPS,0);
 		__delay_cycles(5000000);
-		Turn(RIGHT,0,SWEEP);
+		Turn(RIGHT,0,SWEEP,STEPS_PER_SWEEP);
 		__delay_cycles(5000000);
 	}
 }
@@ -279,37 +273,37 @@ void Final_Run()
 		  //Stright from start then turn left
 	    Straight(FORWARD,TABLE_LENGTH_STEPS,i_Left_Profile);
 	    __delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,SWEEP);
+		Turn(LEFT,i_Left_Profile,SWEEP,STEPS_PER_SWEEP);
 		__delay_cycles(5000000);
 
 		//straight across top of table then turn left
 	    Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
 	    __delay_cycles(5000000);
-	    Turn(LEFT,i_Left_Profile,SWEEP);
+	    Turn(LEFT,i_Left_Profile,SWEEP,STEPS_PER_SWEEP);
 	    __delay_cycles(5000000);
 
 	    //Down left hand side then turn left
 	    Straight(FORWARD,GRID_STEPS,i_Left_Profile);
 	    __delay_cycles(5000000);
-	    Turn(LEFT,i_Left_Profile,DIME);
+	    Turn(LEFT,i_Left_Profile,DIME,STEPS_PER_DIME);
 	    __delay_cycles(5000000);
 
 	    //straight back across table then turn right
 	    Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
 	    __delay_cycles(5000000);
-	    Turn(RIGHT,i_Left_Profile,SWEEP);
+	    Turn(RIGHT,i_Left_Profile,SWEEP,STEPS_PER_SWEEP);
 		__delay_cycles(5000000);
 
 		//down right hand side then turn right
 		Straight(FORWARD,GRID_STEPS,i_Left_Profile);
 		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile, DIME);
+		Turn(RIGHT,i_Left_Profile, DIME,STEPS_PER_DIME);
 		__delay_cycles(5000000);
 
 		//straight across table to left then turn left
 		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
 		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile, SWEEP);
+		Turn(LEFT,i_Left_Profile, SWEEP,STEPS_PER_SWEEP);
 		__delay_cycles(5000000);
 
 		//add in two more crosses
@@ -317,25 +311,25 @@ void Final_Run()
 		//Down left hand side then turn left
 		Straight(FORWARD,GRID_STEPS,i_Left_Profile);
 		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile, DIME);
+		Turn(LEFT,i_Left_Profile, DIME,STEPS_PER_DIME);
 		__delay_cycles(5000000);
 
 		//straight back across table then turn right
 		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
 		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile, SWEEP);
+		Turn(RIGHT,i_Left_Profile, SWEEP,STEPS_PER_SWEEP);
 		__delay_cycles(5000000);
 
 		//down right hand side then turn right
 		Straight(FORWARD,GRID_STEPS,i_Left_Profile);
 		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile, DIME);
+		Turn(RIGHT,i_Left_Profile, DIME,STEPS_PER_DIME);
 		__delay_cycles(5000000);
 
 		//straight across table to left then turn left
 		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
 		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile, SWEEP);
+		Turn(LEFT,i_Left_Profile, SWEEP,STEPS_PER_SWEEP);
 		__delay_cycles(5000000);
 
 		Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*2,i_Left_Profile);
