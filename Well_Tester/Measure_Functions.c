@@ -29,7 +29,7 @@
 //macro definitions
 #define TICK_FREQUENCY 			(CLOCK_FREQ/8)
 #define TICK_RESOLUTION 		(10)
-#define PULSE_PERIOD_TICKS 		(400000UL)
+#define PULSE_PERIOD_TICKS 		(200000UL)
 #define PULSE_DURATION_TICKS	(20)
 #define CUP_FOUND_TICKS			(25000)
 #define MIN_LEFTOVER_TICKS		(30)
@@ -240,7 +240,6 @@ __interrupt void TIMER0_CCR0_ISR(void){
 					if(Time_Sum < CUP_FOUND_TICKS){
 						Shutdown_Pulses();
 						Shutdown_Counter();
-						for(;;){}
 						Cup_Found();
 					}
 				}

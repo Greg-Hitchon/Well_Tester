@@ -104,7 +104,7 @@ struct Track_Info s_Track_Info;
 uint16_t caui_Last_State[2] ={NUM_STATES+1};
 uint8_t caui_State_Direction[2]={FORWARD};
 
-bool cub_Cup_Found = false;
+bool cub_Cup_Found = false, cub_Int_While_Turning = false;
 
 //**********************************************************************************************************||
 //core functions
@@ -600,7 +600,7 @@ void Go_Home(void){
 	}
 
 	//if we were turning we need to complete the turn (could adjust to turn back if more efficient but leave it as just finishing the turn for now)
-	if(s_Track_Info.Is_Turning && s_Track_Info.Z_Steps > 0){
+	if(cub_Int_While_Turning && s_Track_Info.Z_Steps > 0){
 		Turn(s_Track_Info.Turn_Direction, s_Track_Info.Profile_ID, s_Track_Info.Turn_Type, s_Track_Info.Z_Steps);
 	}
 
@@ -709,6 +709,9 @@ void Cup_Found(void){
 		else{
 			s_Track_Info.Z_Steps = s_Cur_Motor_State[RIGHT].Step_Target - s_Cur_Motor_State[RIGHT].Step_Count;
 		}
+
+		//update flag so we know to complete turn
+		cub_Int_While_Turning = true;
 
 	}
 

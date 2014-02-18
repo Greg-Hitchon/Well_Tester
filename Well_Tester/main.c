@@ -100,7 +100,7 @@ void main(void) {
 		Initialize_Pulses();
 		Initialize_Bits();
 		Initialize_Tracking();
-		Create_Nav_Profile(0,4000,5500,4000,10,10,1,1);
+		Create_Nav_Profile(0,4000,7000,4000,13,13,1,1);
 		//P2OUT = 0;
 		//P2DIR = 0;
 		Final_Run();
