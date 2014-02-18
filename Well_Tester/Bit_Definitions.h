@@ -10,7 +10,6 @@
 #ifndef BIT_DEFINITIONS_H_
 #define BIT_DEFINITIONS_H_
 
-#define BIT_STARTUP						(0x08)
 #define BIT_TXD                         (0x04)
 #define LED_RED							(0x01)
 
@@ -46,9 +45,6 @@
 #define INPUT_RUN_TYPE				(0x20)
 #define INPUT_LIGHT					(0x20)
 #define INPUT_CONDUCTIVITY			(0x02)
-
-#define RUN_MODE					(0x1)
-#define TEST_MODE					(0x2)
 
 #define NORTH						(0x1)
 #define EAST						(0x2)

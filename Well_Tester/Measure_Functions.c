@@ -35,6 +35,10 @@
 #define MIN_LEFTOVER_TICKS		(30)
 #define NUM_PULSE_AVG			(10)
 
+#define NUM_LIGHT_TEST 			(10)
+#define NUM_COND_TEST 			(10)
+#define NUM_VARIABILITY 		(10)
+
 
 //function definitions
 uint16_t cstlog2(unsigned int);
@@ -53,6 +57,130 @@ bool gub_Counter_Running = false, gub_Pulse_Start = false;
 
 void Get_Result(void){
 	__delay_cycles(16000000);
+
+	/*
+	bool b_Is_Light = false, b_Is_Volatile = false;
+		uint16_t Avg_Cond_Value, Avg_Light_Value, i, ui_Last_Cond, ui_Current_Cond, ui_Max_Diff = 0;;
+
+		//add in a few lines to differentiate
+			Print_String("\r\n\r\n");
+		//delay for 30s
+			for (i=0;i<30;i++){
+				//print countdown
+					Print_UINT(30-i);
+					__delay_cycles(11000000);
+					Print_String("\r\n");
+					__delay_cycles(5000000);
+
+				//update last value 1s before the test begins
+					if(i==(NUM_VARIABILITY-2)){
+						ui_Last_Cond = Analog_Read(INPUT_CONDUCTIVITY, 100);
+					}
+				//only get variability after ~10s
+					if(i>(NUM_VARIABILITY-2)){
+					//get conductivity measurement
+						ui_Current_Cond = Analog_Read(INPUT_CONDUCTIVITY, 100);
+					//save maximum diff between readings
+						if(ui_Current_Cond>ui_Last_Cond){
+							if(ui_Max_Diff<(ui_Current_Cond-ui_Last_Cond)){
+								ui_Max_Diff+=(ui_Current_Cond-ui_Last_Cond);
+							}
+						}
+						else{
+							if(ui_Max_Diff<(ui_Last_Cond-ui_Current_Cond)){
+								ui_Max_Diff+=(ui_Last_Cond-ui_Current_Cond);
+							}
+						}
+					}
+			}
+
+		//test for volatility
+			if(ui_Max_Diff>VOLATILE_THRESHOLD){
+				b_Is_Volatile = true;
+			}
+
+		for(;;){
+		//reset vars
+			Avg_Cond_Value = 0;
+			Avg_Light_Value = 0;
+			b_Is_Light = false;
+
+		//determine conductivity
+			//read analog vals
+				for(i=0;i<NUM_COND_TEST;i++){
+					Avg_Cond_Value+=Analog_Read(INPUT_CONDUCTIVITY, 100);
+				}
+
+				Avg_Cond_Value /= NUM_COND_TEST;
+
+		//determine light dark
+			//read analog vals
+				for(i=0;i<NUM_LIGHT_TEST;i++){
+					Avg_Light_Value+=Analog_Read(INPUT_LIGHT, 100);
+				}
+
+				Avg_Light_Value /= NUM_LIGHT_TEST;
+
+			//set bool based on avg value and threshold
+				if(Avg_Light_Value > LIGHT_THRESHOLD){
+					b_Is_Light = true;
+				}
+
+		//perform logic
+			//print actual readings
+			Print_String("Actual Light Reading: ");
+			__delay_cycles(5000000);
+			Print_UINT(Avg_Light_Value);
+			__delay_cycles(5000000);
+			Print_String("\r\n");
+			__delay_cycles(5000000);
+
+			Print_String("Actual Cond. Reading: ");
+			__delay_cycles(5000000);
+			Print_UINT(Avg_Cond_Value);
+			__delay_cycles(5000000);
+			Print_String("\r\n");
+			__delay_cycles(5000000);
+
+			Print_String("Actual Volatility Reading: ");
+			__delay_cycles(5000000);
+			Print_UINT(ui_Max_Diff);
+			__delay_cycles(5000000);
+			Print_String("\r\n");
+			__delay_cycles(5000000);
+
+			//print choice
+			if((b_Is_Light==false) && (b_Is_Volatile) && (Avg_Cond_Value > 450)){
+				Print_String("Coke");
+			}
+			else if(Avg_Cond_Value<500){
+				if(b_Is_Light){
+					Print_String("White Vinegar");
+				}
+				else{
+					Print_String("Malt Vinegar");
+				}
+			}
+			else if(Avg_Cond_Value<780){
+				if(b_Is_Light){
+					Print_String("Sugar Water");
+				}
+				else{
+					Print_String("Orange Juice");
+				}
+			}
+			else if(Avg_Cond_Value<994){
+				Print_String("Distilled Water");
+			}
+			else {
+				Print_String("Vegetable Oil");
+			}
+
+			//print next line
+			Print_String("\r\n\r\n");
+			__delay_cycles(5000000);
+		}
+	*/
 }
 
 //Analog_Read performs much like the "Arduino" version with a 10-bit digital 

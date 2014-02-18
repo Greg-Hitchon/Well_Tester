@@ -13,7 +13,6 @@
 void Final_Run();
 void Square();
 void Line();
-void Do_Sensing(void);
 
 
 /*
@@ -41,15 +40,9 @@ void Do_Sensing(void);
  *
  *configure for input (high is test, low is run)
  */
-#define NUM_LIGHT_TEST 10
-#define NUM_COND_TEST 10
-#define NUM_VARIABILITY 10
 
 
 void main(void) {
-	//vars for main
-	uint16_t ui_Run_Mode;
-
 	//***************************
 	//CONFIGURATION NONSENSE HERE
 	//***************************
@@ -64,181 +57,29 @@ void main(void) {
 	//____________________________
 
 	//***************************
-	//Determine if test or run
+	//NAVIGATION ALGO HERE
 	//***************************
-	//configure for input (high is test, low is run)
-	P2DIR &= ~INPUT_RUN_TYPE;
-	//delay to let settle
-	__delay_cycles(4000000);
-	//test pin
-	if(P2IN & INPUT_RUN_TYPE){
-		ui_Run_Mode = TEST_MODE;
-	}
-	else{
-		ui_Run_Mode = RUN_MODE;
-	}
-	//____________________________
+	//make sure interrupts are enabled
+	__enable_interrupt();
 
-	ui_Run_Mode = RUN_MODE;
-	//***************************
-	//Either run TEST MODE or RUN MODE
-	//***************************
-	if(ui_Run_Mode == TEST_MODE){
-		Do_Sensing();
-	}
-	else{
-
-		//***************************
-		//NAVIGATION ALGO HERE
-		//***************************
-		//temp
-		P1DIR |= BIT1;
-		__enable_interrupt();
-
-		//final
-		///Wait_For_Startup();
-		Initialize_Pulses();
-		Initialize_Bits();
-		Initialize_Tracking();
-		Create_Nav_Profile(0,4000,7000,4000,13,13,1,1);
-		//P2OUT = 0;
-		//P2DIR = 0;
-		Final_Run();
-		Hold_Until_Finished();
-	}
+	//start the ultrasonic sensing
+	Initialize_Pulses();
+	//initialize startup bit configuration
+	Initialize_Bits();
+	//initialize the tracking direction + distances
+	Initialize_Tracking();
+	//create all necessary profiles for navigation purposes
+	Create_Nav_Profile(0,4000,7000,4000,13,13,1,1);
+	Create_Nav_Profile(1,4000,4000,4000,13,13,1,1);
+	//execute algorithm
+	Final_Run();
 	//____________________________
   
 	//***************************
-	//Program end
+	//Program end, enter infinite loop
 	//***************************
 	while(1);
 }
-
-
-void Do_Sensing(void){
-	bool b_Is_Light = false, b_Is_Volatile = false;
-	uint16_t Avg_Cond_Value, Avg_Light_Value, i, ui_Last_Cond, ui_Current_Cond, ui_Max_Diff = 0;;
-
-	//add in a few lines to differentiate
-		Print_String("\r\n\r\n");
-	//delay for 30s
-		for (i=0;i<30;i++){
-			//print countdown
-				Print_UINT(30-i);
-				__delay_cycles(11000000);
-				Print_String("\r\n");
-				__delay_cycles(5000000);
-
-			//update last value 1s before the test begins
-				if(i==(NUM_VARIABILITY-2)){
-					ui_Last_Cond = Analog_Read(INPUT_CONDUCTIVITY, 100);
-				}
-			//only get variability after ~10s
-				if(i>(NUM_VARIABILITY-2)){
-				//get conductivity measurement
-					ui_Current_Cond = Analog_Read(INPUT_CONDUCTIVITY, 100);
-				//save maximum diff between readings
-					if(ui_Current_Cond>ui_Last_Cond){
-						if(ui_Max_Diff<(ui_Current_Cond-ui_Last_Cond)){
-							ui_Max_Diff+=(ui_Current_Cond-ui_Last_Cond);
-						}
-					}
-					else{
-						if(ui_Max_Diff<(ui_Last_Cond-ui_Current_Cond)){
-							ui_Max_Diff+=(ui_Last_Cond-ui_Current_Cond);
-						}
-					}
-				}
-		}
-
-	//test for volatility
-		if(ui_Max_Diff>VOLATILE_THRESHOLD){
-			b_Is_Volatile = true;
-		}
-
-	for(;;){
-	//reset vars
-		Avg_Cond_Value = 0;
-		Avg_Light_Value = 0;
-		b_Is_Light = false;
-
-	//determine conductivity
-		//read analog vals
-			for(i=0;i<NUM_COND_TEST;i++){
-				Avg_Cond_Value+=Analog_Read(INPUT_CONDUCTIVITY, 100);
-			}
-
-			Avg_Cond_Value /= NUM_COND_TEST;
-
-	//determine light dark
-		//read analog vals
-			for(i=0;i<NUM_LIGHT_TEST;i++){
-				Avg_Light_Value+=Analog_Read(INPUT_LIGHT, 100);
-			}
-
-			Avg_Light_Value /= NUM_LIGHT_TEST;
-
-		//set bool based on avg value and threshold
-			if(Avg_Light_Value > LIGHT_THRESHOLD){
-				b_Is_Light = true;
-			}
-
-	//perform logic
-		//print actual readings
-		Print_String("Actual Light Reading: ");
-		__delay_cycles(5000000);
-		Print_UINT(Avg_Light_Value);
-		__delay_cycles(5000000);
-		Print_String("\r\n");
-		__delay_cycles(5000000);
-
-		Print_String("Actual Cond. Reading: ");
-		__delay_cycles(5000000);
-		Print_UINT(Avg_Cond_Value);
-		__delay_cycles(5000000);
-		Print_String("\r\n");
-		__delay_cycles(5000000);
-
-		Print_String("Actual Volatility Reading: ");
-		__delay_cycles(5000000);
-		Print_UINT(ui_Max_Diff);
-		__delay_cycles(5000000);
-		Print_String("\r\n");
-		__delay_cycles(5000000);
-
-		//print choice
-		if((b_Is_Light==false) && (b_Is_Volatile) && (Avg_Cond_Value > 450)){
-			Print_String("Coke");
-		}
-		else if(Avg_Cond_Value<500){
-			if(b_Is_Light){
-				Print_String("White Vinegar");
-			}
-			else{
-				Print_String("Malt Vinegar");
-			}
-		}
-		else if(Avg_Cond_Value<780){
-			if(b_Is_Light){
-				Print_String("Sugar Water");
-			}
-			else{
-				Print_String("Orange Juice");
-			}
-		}
-		else if(Avg_Cond_Value<994){
-			Print_String("Distilled Water");
-		}
-		else {
-			Print_String("Vegetable Oil");
-		}
-
-		//print next line
-		Print_String("\r\n\r\n");
-		__delay_cycles(5000000);
-	}
-}
-
 
 void Line()
 {
@@ -268,70 +109,70 @@ void Square()
 
 void Final_Run()
 {
-	const uint8_t i_Left_Profile = 0;
+	const uint8_t i_Turn_Profile = 1, i_Straight_Profile = 0;
 
 		  //Stright from start then turn left
-	    Straight(FORWARD,TABLE_LENGTH_STEPS,i_Left_Profile);
+	    Straight(FORWARD,TABLE_LENGTH_STEPS,i_Straight_Profile);
 	    __delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile,SWEEP,STEPS_PER_SWEEP);
+		Turn(LEFT,i_Turn_Profile,SWEEP,STEPS_PER_SWEEP);
 		__delay_cycles(5000000);
 
 		//straight across top of table then turn left
-	    Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
+	    Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
 	    __delay_cycles(5000000);
-	    Turn(LEFT,i_Left_Profile,SWEEP,STEPS_PER_SWEEP);
+	    Turn(LEFT,i_Turn_Profile,SWEEP,STEPS_PER_SWEEP);
 	    __delay_cycles(5000000);
 
 	    //Down left hand side then turn left
-	    Straight(FORWARD,GRID_STEPS,i_Left_Profile);
+	    Straight(FORWARD,GRID_STEPS,i_Straight_Profile);
 	    __delay_cycles(5000000);
-	    Turn(LEFT,i_Left_Profile,DIME,STEPS_PER_DIME);
+	    Turn(LEFT,i_Turn_Profile,DIME,STEPS_PER_DIME);
 	    __delay_cycles(5000000);
 
 	    //straight back across table then turn right
-	    Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
+	    Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
 	    __delay_cycles(5000000);
-	    Turn(RIGHT,i_Left_Profile,SWEEP,STEPS_PER_SWEEP);
+	    Turn(RIGHT,i_Turn_Profile,SWEEP,STEPS_PER_SWEEP);
 		__delay_cycles(5000000);
 
 		//down right hand side then turn right
-		Straight(FORWARD,GRID_STEPS,i_Left_Profile);
+		Straight(FORWARD,GRID_STEPS,i_Straight_Profile);
 		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile, DIME,STEPS_PER_DIME);
+		Turn(RIGHT,i_Turn_Profile, DIME,STEPS_PER_DIME);
 		__delay_cycles(5000000);
 
 		//straight across table to left then turn left
-		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
+		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
 		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile, SWEEP,STEPS_PER_SWEEP);
+		Turn(LEFT,i_Turn_Profile, SWEEP,STEPS_PER_SWEEP);
 		__delay_cycles(5000000);
 
 		//add in two more crosses
 
 		//Down left hand side then turn left
-		Straight(FORWARD,GRID_STEPS,i_Left_Profile);
+		Straight(FORWARD,GRID_STEPS,i_Straight_Profile);
 		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile, DIME,STEPS_PER_DIME);
+		Turn(LEFT,i_Turn_Profile, DIME,STEPS_PER_DIME);
 		__delay_cycles(5000000);
 
 		//straight back across table then turn right
-		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
+		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
 		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile, SWEEP,STEPS_PER_SWEEP);
+		Turn(RIGHT,i_Turn_Profile, SWEEP,STEPS_PER_SWEEP);
 		__delay_cycles(5000000);
 
 		//down right hand side then turn right
-		Straight(FORWARD,GRID_STEPS,i_Left_Profile);
+		Straight(FORWARD,GRID_STEPS,i_Straight_Profile);
 		__delay_cycles(5000000);
-		Turn(RIGHT,i_Left_Profile, DIME,STEPS_PER_DIME);
+		Turn(RIGHT,i_Turn_Profile, DIME,STEPS_PER_DIME);
 		__delay_cycles(5000000);
 
 		//straight across table to left then turn left
-		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Left_Profile);
+		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
 		__delay_cycles(5000000);
-		Turn(LEFT,i_Left_Profile, SWEEP,STEPS_PER_SWEEP);
+		Turn(LEFT,i_Turn_Profile, SWEEP,STEPS_PER_SWEEP);
 		__delay_cycles(5000000);
 
-		Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*2,i_Left_Profile);
+		Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*2,i_Straight_Profile);
 		__delay_cycles(5000000);
 }

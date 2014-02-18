@@ -114,25 +114,6 @@ bool cub_Cup_Found = false, cub_Int_While_Turning = false;
 //**********************************************************************************************************||
 //**********************************************************************************************************||
 
-//just waits for a startup on some port 1 pin
-void Wait_For_Startup(void){
-	//*******************************
-	//configure startup bit for input
-	P1DIR &= ~BIT_STARTUP;
-	//rising edge trigger
-	P1IES &= ~BIT_STARTUP;
-	//enable interrupt
-	P1IE |= BIT_STARTUP;
-	//*******************************
-
-	//turn off cpu
-	__bis_SR_register(CPUOFF + GIE);
-
-	//turn off startup interrupt and configure as output
-	P1IE &= ~BIT_STARTUP;
-	P1DIR |=BIT_STARTUP;
-}
-
 //origin is at finish line with x axis across to start
 //north is along positive y axis, east along positive x axis
 void Initialize_Tracking(void){
@@ -735,14 +716,6 @@ void Cup_Found(void){
 //all port 1 interrupts, controls startup and cup locating
 #pragma vector=PORT1_VECTOR
 __interrupt void PORT1_ISR(void){
-
-	  if(P1IFG & BIT_STARTUP){
-		  //this little routine just responds to the startup pin event by
-		  P1OUT &= ~LED_RED;
-		  __delay_cycles(STARTUP_DELAY_TICKS);
-		  __bic_SR_register_on_exit(CPUOFF);
-	  }
-
 	  //clear fgs
 	  P1IFG = 0x0;
 }
