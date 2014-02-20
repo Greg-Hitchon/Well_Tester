@@ -44,9 +44,7 @@
 uint16_t cstlog2(unsigned int);
 void Shutdown_Pulses(void);
 void Initialize_Counter(void);
-void Reset_Count(void);
 void Shutdown_Counter(void);
-uint32_t Get_Count(void);
 
 //global variables
 uint32_t gul_ADC_Total;
@@ -55,9 +53,9 @@ uint8_t gui_Channel;
 bool gub_Counter_Running = false, gub_Pulse_Start = false;
    
 
-void Get_Result(void){
+uint8_t Get_Result(void){
 	__delay_cycles(16000000);
-
+	return LT_MALT_VINEGAR;
 	/*
 	bool b_Is_Light = false, b_Is_Volatile = false;
 		uint16_t Avg_Cond_Value, Avg_Light_Value, i, ui_Last_Cond, ui_Current_Cond, ui_Max_Diff = 0;;

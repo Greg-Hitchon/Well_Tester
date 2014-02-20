@@ -13,7 +13,7 @@
 unsigned int Analog_Read(uint8_t Channel,
 						uint16_t Sample_Target);
 
-void Get_Result(void);
+uint8_t Get_Result(void);
 void Reset_Count(void);
 void Initialize_Pulses(void);
 bool Get_Pulse_Status(void);

@@ -8,6 +8,7 @@
 #include "Bit_Definitions.h"
 
 #define UART_DIVISOR (UINT16_C(1666))
+#define PRINT_DELAY (5000000)
 
 void Print_String(char *);
 unsigned int strlen(const char *);
@@ -34,8 +35,62 @@ void Setup_Comms(void)
 }
 
 
-void Output_Result(void){
-	__delay_cycles(16000000);
+void Output_Result(uint8_t Liquid_Type){
+	//this is a simple function to print the liquid type out (not the best way of doing it but it works)
+	switch(Liquid_Type){
+	case LT_APPLE_JUICE:
+		Print_String("Apple Juice");
+		__delay_cycles(PRINT_DELAY);
+		Print_String("\r\n");
+		break;
+	case LT_COKE:
+		Print_String("Coke");
+		__delay_cycles(PRINT_DELAY);
+		Print_String("\r\n");
+		break;
+	case LT_DISTILLED_WATER:
+		Print_String("Distilled Water");
+		__delay_cycles(PRINT_DELAY);
+		Print_String("\r\n");
+		break;
+	case LT_MALT_VINEGAR:
+		Print_String("Malt Vinegar");
+		__delay_cycles(PRINT_DELAY);
+		Print_String("\r\n");
+		break;
+	case LT_MINERAL_OIL:
+		Print_String("Mineral Oil");
+		__delay_cycles(PRINT_DELAY);
+		Print_String("\r\n");
+		break;
+	case LT_ORANGE_JUICE:
+		Print_String("Orange Juice");
+		__delay_cycles(PRINT_DELAY);
+		Print_String("\r\n");
+		break;
+	case LT_SALT_WATER:
+		Print_String("Salt Water");
+		__delay_cycles(PRINT_DELAY);
+		Print_String("\r\n");
+		break;
+	case LT_SUGAR_WATER:
+		Print_String("Sugar Water");
+		__delay_cycles(PRINT_DELAY);
+		Print_String("\r\n");
+		break;
+	case LT_VEGETABLE_OIL:
+		Print_String("Vegetable Oil");
+		__delay_cycles(PRINT_DELAY);
+		Print_String("\r\n");
+		break;
+	case LT_WHITE_VINEGAR:
+		Print_String("White Vinegar");
+		__delay_cycles(PRINT_DELAY);
+		Print_String("\r\n");
+		break;
+	default:
+		break;
+	}
 }
   //char *c_Tst1;
 void Print_UINT(uint16_t Value){

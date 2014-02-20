@@ -73,7 +73,7 @@ void main(void) {
 	//initialize the tracking direction + distances
 	Initialize_Tracking();
 	//create all necessary profiles for navigation purposes
-	Create_Nav_Profile(0,4000,7500,4000,10,10,1,1);
+	Create_Nav_Profile(0,4000,7500,5500,10,10,1,1);
 	Create_Nav_Profile(1,4000,6000,4000,10,10,1,1);
 	//execute algorithm
 	Final_Run();
@@ -177,6 +177,6 @@ void Final_Run()
 		Turn(LEFT,i_Turn_Profile, SWEEP,STEPS_PER_SWEEP);
 		__delay_cycles(DELAY_BETWEEN);
 
-		Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*2,i_Straight_Profile);
-		__delay_cycles(DELAY_BETWEEN);
+		//go home here
+		Go_Home();
 }

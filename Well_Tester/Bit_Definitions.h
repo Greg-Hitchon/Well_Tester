@@ -52,5 +52,17 @@
 #define SOUTH						(0x4)
 #define WEST						(0x8)
 
+#define LT_ORANGE_JUICE				(0x1)
+#define LT_APPLE_JUICE				(0x2)
+#define LT_COKE						(0x3)
+#define LT_MALT_VINEGAR				(0x4)
+#define LT_WHITE_VINEGAR			(0x5)
+#define LT_MINERAL_OIL				(0x6)
+#define LT_VEGETABLE_OIL			(0x7)
+#define LT_SUGAR_WATER				(0x8)
+#define LT_SALT_WATER				(0x9)
+#define LT_DISTILLED_WATER			(0xA)
+
+
 
 #endif /* BIT_DEFINITIONS_H_ */

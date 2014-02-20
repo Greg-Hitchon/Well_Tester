@@ -572,6 +572,8 @@ void Update_XY_Coords(uint32_t Steps,
 
 //this just goes hoem based on direction and coordinates
 void Go_Home(void){
+	uint8_t Liquid_Type = 0;
+
 	//change to false to prevent recursion
 	cub_Cup_Found = false;
 
@@ -599,14 +601,7 @@ void Go_Home(void){
 		//do y translation
 		Straight(FORWARD,s_Track_Info.Y_Steps,0);
 
-		//get result from sensing unit
-		Get_Result();
-		//print to computer
-		Output_Result();
-		//infinite loop
-		__disable_interrupt();
-		for(;;){};
-		//break;
+		break;
 	case EAST:
 		//get to y direction
 		Turn(RIGHT,0,DIME, STEPS_PER_DIME);
@@ -618,14 +613,7 @@ void Go_Home(void){
 		//do x translation
 		Straight(FORWARD, s_Track_Info.X_Steps,0);
 
-		//get result from sensing unit
-		Get_Result();
-		//print to computer
-		Output_Result();
-		//infinite loop
-		__disable_interrupt();
-		for(;;){};
-		//break;
+		break;
 	case SOUTH:
 		//do y translation
 		Straight(FORWARD,s_Track_Info.Y_Steps,0);
@@ -637,14 +625,7 @@ void Go_Home(void){
 			Straight(FORWARD, s_Track_Info.X_Steps,0);
 		}
 
-		//get result from sensing unit
-		Get_Result();
-		//print to computer
-		Output_Result();
-		//infinite loop
-		__disable_interrupt();
-		for(;;){};
-		//break;
+		break;
 	case WEST:
 		//do x translation
 		Straight(FORWARD,s_Track_Info.X_Steps,0);
@@ -655,14 +636,18 @@ void Go_Home(void){
 			//do y translation
 			Straight(FORWARD, s_Track_Info.Y_Steps,0);
 		}
+	}
 
-		//get result from sensing unit
-		Get_Result();
-		//print to computer
-		Output_Result();
-		//infinite loop
-		__disable_interrupt();
-		for(;;){};
+	//turn off motors
+	P2OUT = 0;
+	P2DIR = 0;
+
+	//get result from sensing unit
+	Liquid_Type = Get_Result();
+
+	//print to computer
+	for(;;){
+		Output_Result(Liquid_Type);
 	}
 }
 
