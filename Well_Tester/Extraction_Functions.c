@@ -6,7 +6,10 @@
  */
 
 //system includes
+#include "Project_Parameters.h"
+#include TEST_CHIP
 #include <stdint.h>
+
 
 //user defined includes
 #include "Nav_Functions.h"
@@ -14,8 +17,9 @@
 
 
 //parameters
-#define STEPS_ADJUST_FORWARD (0)
-#define STEPS_ADJUST_BACKWARD (300)
+#define STEPS_ADJUST_FORWARD 	(0)
+#define STEPS_ADJUST_BACKWARD 	(300)
+#define WAIT_CYCLES				(10*16000000)
 
 void Extract_Liquid(void){
 	//dependent on placement has to move forward more
@@ -27,6 +31,9 @@ void Extract_Liquid(void){
 		Straight(BACKWARD,STEPS_ADJUST_BACKWARD,0);
 	}
 
-	//just to simulate some time
-	__delay_cycles(16000000);
+	//pump for some time
+	P1DIR |= BIT_PUMP;
+	P1OUT |=BIT_PUMP;
+	__delay_cycles(WAIT_CYCLES);
+	P1OUT &= ~BIT_PUMP;
 }
