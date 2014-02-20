@@ -40,7 +40,7 @@ void Clear_State(uint8_t Motor_ID);
 
 
 //core preprocessor constants (distance in 0.1mm, frequency in KHz, time is in 1/100(seconds))
-#define NUM_NAV_PROFILES		(1)
+#define NUM_NAV_PROFILES		(2)
 #define MIN_TICK_INCREMENT		(1000)
 #define NUM_STATES				(8)
 #define NUM_MOTORS				(2)

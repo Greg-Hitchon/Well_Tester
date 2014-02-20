@@ -9,10 +9,14 @@
 #include "Communication_Functions.h"
 #include "cstbool.h"
 
+//defines
+#define DELAY_BETWEEN (5000)
+
 //function prototypes
 void Final_Run();
 void Square();
 void Line();
+
 
 
 /*
@@ -69,8 +73,8 @@ void main(void) {
 	//initialize the tracking direction + distances
 	Initialize_Tracking();
 	//create all necessary profiles for navigation purposes
-	Create_Nav_Profile(0,4000,7000,4000,13,13,1,1);
-	Create_Nav_Profile(1,4000,4000,4000,13,13,1,1);
+	Create_Nav_Profile(0,4000,7500,4000,10,10,1,1);
+	Create_Nav_Profile(1,4000,6000,4000,10,10,1,1);
 	//execute algorithm
 	Final_Run();
 	//____________________________
@@ -113,66 +117,66 @@ void Final_Run()
 
 		  //Stright from start then turn left
 	    Straight(FORWARD,TABLE_LENGTH_STEPS,i_Straight_Profile);
-	    __delay_cycles(5000000);
+	    __delay_cycles(DELAY_BETWEEN);
 		Turn(LEFT,i_Turn_Profile,SWEEP,STEPS_PER_SWEEP);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 
 		//straight across top of table then turn left
 	    Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
-	    __delay_cycles(5000000);
+	    __delay_cycles(DELAY_BETWEEN);
 	    Turn(LEFT,i_Turn_Profile,SWEEP,STEPS_PER_SWEEP);
-	    __delay_cycles(5000000);
+	    __delay_cycles(DELAY_BETWEEN);
 
 	    //Down left hand side then turn left
 	    Straight(FORWARD,GRID_STEPS,i_Straight_Profile);
-	    __delay_cycles(5000000);
+	    __delay_cycles(DELAY_BETWEEN);
 	    Turn(LEFT,i_Turn_Profile,DIME,STEPS_PER_DIME);
-	    __delay_cycles(5000000);
+	    __delay_cycles(DELAY_BETWEEN);
 
 	    //straight back across table then turn right
 	    Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
-	    __delay_cycles(5000000);
+	    __delay_cycles(DELAY_BETWEEN);
 	    Turn(RIGHT,i_Turn_Profile,SWEEP,STEPS_PER_SWEEP);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 
 		//down right hand side then turn right
 		Straight(FORWARD,GRID_STEPS,i_Straight_Profile);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 		Turn(RIGHT,i_Turn_Profile, DIME,STEPS_PER_DIME);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 
 		//straight across table to left then turn left
 		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 		Turn(LEFT,i_Turn_Profile, SWEEP,STEPS_PER_SWEEP);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 
 		//add in two more crosses
 
 		//Down left hand side then turn left
 		Straight(FORWARD,GRID_STEPS,i_Straight_Profile);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 		Turn(LEFT,i_Turn_Profile, DIME,STEPS_PER_DIME);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 
 		//straight back across table then turn right
 		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 		Turn(RIGHT,i_Turn_Profile, SWEEP,STEPS_PER_SWEEP);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 
 		//down right hand side then turn right
 		Straight(FORWARD,GRID_STEPS,i_Straight_Profile);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 		Turn(RIGHT,i_Turn_Profile, DIME,STEPS_PER_DIME);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 
 		//straight across table to left then turn left
 		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 		Turn(LEFT,i_Turn_Profile, SWEEP,STEPS_PER_SWEEP);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 
 		Straight(FORWARD,TABLE_LENGTH_STEPS-GRID_STEPS*2,i_Straight_Profile);
-		__delay_cycles(5000000);
+		__delay_cycles(DELAY_BETWEEN);
 }
