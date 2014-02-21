@@ -39,11 +39,15 @@ void Update_XY_Coords(uint32_t Steps, uint8_t Direction);
 void Clear_State(uint8_t Motor_ID);
 
 
-//core preprocessor constants (distance in 0.1mm, frequency in KHz, time is in 1/100(seconds))
+//core preprocessor constants
+//cant have too many nav profiles as memory considerations happen fast
 #define NUM_NAV_PROFILES		(2)
+//this has to be high enough that we dont miss the next step.  small enough not to make driving rough
 #define MIN_TICK_INCREMENT		(1000)
+//using half step so the phase count is 8
 #define NUM_STATES				(8)
 #define NUM_MOTORS				(2)
+//this is the number of steps used to make sure we dont run into the wall in the go_home algo
 #define STEPS_Y_ADJUST			(150)
 
 
@@ -67,8 +71,9 @@ const uint8_t cch_State_Map[NUM_MOTORS][NUM_STATES] = {{BIT0,BIT3,BIT1,BIT0,BIT2
 //**********************************************************************************************************||
 
 //structs
+//Total mem: 2*50+2*30 + 10 = ~200 bytes.  less than half available used, so functions etc will be okay unless declaring large arrays/tons of vars
 
-//contains info for each motor when given a nav profile as well as a specific step count, number in memory is 2, one for each motoor
+//contains info for each motor when given a nav profile as well as a specific step count, number in memory is 2, one for each motor
 //Mem: ~50Bytes
 struct Motor_State {
 	uint32_t Step_Target, Step_Count, Tick_Total;
@@ -87,7 +92,9 @@ struct Nav_Profile{
 };
 
 //contains info used to track position of the robot, not necessary as only 1 in memory but makes code clearer
+//mem: ~10 bytes
 struct Track_Info{
+	//X is an axis along the line connecting the sensing area and the starting area, Y is perpindicular to the X axis intersect at leftmost point of X axis, Z is the rotational steps
 	uint16_t X_Steps, Y_Steps, Z_Steps;
 	uint8_t Orientation_Index, Turn_Type, Turn_Direction, Profile_ID;
 	bool Is_Turning;

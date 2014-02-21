@@ -14,9 +14,6 @@
 
 //function prototypes
 void Final_Run();
-void Square();
-void Line();
-
 
 
 /*
@@ -28,21 +25,17 @@ void Line();
  *The code is fairly procedural and should be easy to follow.
  *
  *The mapping of pinouts is as follows: 
- *PORT 1=1 TXD pin for UART, 1 Interrupt for Extraction, 6 General I/O available for ADC
- *PORT 2=4 Motor outputs, 4 General I/O available for frequency conversion
+ *PORT 1=1 TXD pin for UART, 2 Ports for Cup detection, 1 Port for Extraction, 2 For Sensing, 2 Undetermined
+ *PORT 2=8 Motor outputs
  *
- *So after the navigation and communication needs are satisfied we have 10 pins left, 6 of which 
- *can be used with ADC (multiple LED inputs for instance) and 4 for frequency (converting physical property to oscillator)
  *
  *TO DO LIST:
- *-clarify set up/execute for ADC, FREQ, NAVIGATION, COMMUNICATION
- *-make printing numbers one function, with parameter for length
+ *
  *
  *THINGS DEPENDENT ON CLOCK FREQUENCY:
  *-certain calculations may need to be adjusted (due to integer division/range issues) if clock freq is increased
  *
  *
- *configure for input (high is test, low is run)
  */
 
 
@@ -85,32 +78,8 @@ void main(void) {
 	while(1);
 }
 
-void Line()
-{
-	uint16_t i_Spd = 1500;
 
-	for(;;){
-		//Stright from start then turn left
-		Create_Nav_Profile(0,i_Spd,i_Spd,i_Spd,10,10,1,1);
-		Straight(FORWARD,TABLE_LENGTH_STEPS,0);
-		__delay_cycles(5000000);
-		//i_Spd +=500;
-	}
-}
-
-
-void Square()
-{
-	for(;;){
-		//Stright from start then turn left
-		Straight(FORWARD,TABLE_LENGTH_STEPS,0);
-		__delay_cycles(5000000);
-		Turn(RIGHT,0,SWEEP,STEPS_PER_SWEEP);
-		__delay_cycles(5000000);
-	}
-}
-
-
+//structure of this could be improved
 void Final_Run()
 {
 	const uint8_t i_Turn_Profile = 1, i_Straight_Profile = 0;
