@@ -9,13 +9,6 @@
 #include "Communication_Functions.h"
 #include "cstbool.h"
 
-//defines
-#define DELAY_BETWEEN (5000)
-
-//function prototypes
-void Final_Run();
-
-
 /*
  * main.c
  *
@@ -81,76 +74,4 @@ void main(void) {
 	//Program end, enter infinite loop
 	//***************************
 	while(1);
-}
-
-
-//structure of this could be improved
-void Final_Run()
-{
-	const uint8_t i_Turn_Profile = 1, i_Straight_Profile = 0;
-
-		  //Stright from start then turn left
-	    Straight(FORWARD,TABLE_LENGTH_STEPS,i_Straight_Profile);
-	    __delay_cycles(DELAY_BETWEEN);
-		Turn(LEFT,i_Turn_Profile,SWEEP,STEPS_PER_SWEEP);
-		__delay_cycles(DELAY_BETWEEN);
-
-		//straight across top of table then turn left
-	    Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
-	    __delay_cycles(DELAY_BETWEEN);
-	    Turn(LEFT,i_Turn_Profile,SWEEP,STEPS_PER_SWEEP);
-	    __delay_cycles(DELAY_BETWEEN);
-
-	    //Down left hand side then turn left
-	    Straight(FORWARD,GRID_STEPS,i_Straight_Profile);
-	    __delay_cycles(DELAY_BETWEEN);
-	    Turn(LEFT,i_Turn_Profile,DIME,STEPS_PER_DIME);
-	    __delay_cycles(DELAY_BETWEEN);
-
-	    //straight back across table then turn right
-	    Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
-	    __delay_cycles(DELAY_BETWEEN);
-	    Turn(RIGHT,i_Turn_Profile,SWEEP,STEPS_PER_SWEEP);
-		__delay_cycles(DELAY_BETWEEN);
-
-		//down right hand side then turn right
-		Straight(FORWARD,GRID_STEPS,i_Straight_Profile);
-		__delay_cycles(DELAY_BETWEEN);
-		Turn(RIGHT,i_Turn_Profile, DIME,STEPS_PER_DIME);
-		__delay_cycles(DELAY_BETWEEN);
-
-		//straight across table to left then turn left
-		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
-		__delay_cycles(DELAY_BETWEEN);
-		Turn(LEFT,i_Turn_Profile, SWEEP,STEPS_PER_SWEEP);
-		__delay_cycles(DELAY_BETWEEN);
-
-		//add in two more crosses
-
-		//Down left hand side then turn left
-		Straight(FORWARD,GRID_STEPS,i_Straight_Profile);
-		__delay_cycles(DELAY_BETWEEN);
-		Turn(LEFT,i_Turn_Profile, DIME,STEPS_PER_DIME);
-		__delay_cycles(DELAY_BETWEEN);
-
-		//straight back across table then turn right
-		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
-		__delay_cycles(DELAY_BETWEEN);
-		Turn(RIGHT,i_Turn_Profile, SWEEP,STEPS_PER_SWEEP);
-		__delay_cycles(DELAY_BETWEEN);
-
-		//down right hand side then turn right
-		Straight(FORWARD,GRID_STEPS,i_Straight_Profile);
-		__delay_cycles(DELAY_BETWEEN);
-		Turn(RIGHT,i_Turn_Profile, DIME,STEPS_PER_DIME);
-		__delay_cycles(DELAY_BETWEEN);
-
-		//straight across table to left then turn left
-		Straight(FORWARD,TABLE_WIDTH_STEPS,i_Straight_Profile);
-		__delay_cycles(DELAY_BETWEEN);
-		Turn(LEFT,i_Turn_Profile, SWEEP,STEPS_PER_SWEEP);
-		__delay_cycles(DELAY_BETWEEN);
-
-		//go home here
-		Go_Home();
 }

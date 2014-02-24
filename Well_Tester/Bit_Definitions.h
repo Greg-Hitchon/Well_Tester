@@ -44,15 +44,16 @@
 #define TURN_LEFT					(LEFT_BACKWARD+RIGHT_FORWARD)
 #define TURN_RIGHT					(LEFT_FORWARD+RIGHT_BACKWARD)
 
-//numeric constants for turn types
+//numeric constants for element types
 #define SWEEP						(0x1)
 #define DIME						(0x2)
+#define LINE						(0x4)
 
 //numeric constants for direction
 #define NORTH						(0x1)
 #define EAST						(0x2)
-#define SOUTH						(0x4)
-#define WEST						(0x8)
+#define SOUTH						(0x3)
+#define WEST						(0x4)
 
 //numeric constants for liquid types (LT's)
 #define LT_ORANGE_JUICE				(0x1)

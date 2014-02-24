@@ -49,6 +49,8 @@ void Clear_State(uint8_t Motor_ID);
 #define NUM_MOTORS				(2)
 //this is the number of steps used to make sure we dont run into the wall in the go_home algo
 #define STEPS_Y_ADJUST			(150)
+//delay between movement in the execute crosses algo
+#define DELAY_BETWEEN 			(5000)
 
 
 //secondary (calculated) values
@@ -583,6 +585,96 @@ void Update_XY_Coords(uint32_t Steps,
 	}
 }
 
+//this function just puts the final algorithm in a function
+void Final_Run(void){
+	const uint8_t i_Turn_Profile = 1, i_Straight_Profile = 0;
+	//go straight up the east wall
+	Straight(FORWARD,TABLE_LENGTH_STEPS,i_Straight_Profile);
+	//execute 5 crosses
+	Execute_Cross(EAST,i_Straight_Profile,i_Turn_Profile,5);
+	//go home here if no cup is found
+	Go_Home();
+}
+
+//this function executes n "crosses" across the board given a starting side (east or west)
+//no global tracking of current side, can be determined on calling side by even/odd
+void Execute_Cross(uint8_t Starting_Side,
+					uint8_t Straight_ID,
+					uint8_t Turn_ID,
+					uint8_t Num_Crosses){
+	uint8_t Side_Tracker, Cross_Tracker;
+
+	//initialize starting side
+	Side_Tracker = Starting_Side;
+
+	//do the loop
+	for(Cross_Tracker = Num_Crosses; Cross_Tracker > 0; Cross_Tracker--){
+		//delay for determined period
+		__delay_cycles(DELAY_BETWEEN);
+
+		//orient across the board and toggle the sides
+		if(Side_Tracker == EAST){
+			Re_Orient(WEST,Turn_ID);
+			Side_Tracker = WEST;
+		}
+		else{
+			Re_Orient(EAST,Turn_ID);
+			Side_Tracker = EAST;
+		}
+
+		//delay for determined period
+		__delay_cycles(DELAY_BETWEEN);
+
+		//go straight across the board
+		Straight(FORWARD,TABLE_WIDTH_STEPS,Straight_ID);
+
+		//delay for determined period
+		__delay_cycles(DELAY_BETWEEN);
+
+		//reorient to the south
+		Re_Orient(SOUTH,Turn_ID);
+
+		//delay for determined period
+		__delay_cycles(DELAY_BETWEEN);
+
+		//move down the grid steps
+		Straight(FORWARD,GRID_STEPS,Straight_ID);
+	}
+}
+
+
+//this function takes a direction as an input and truns the robot to that orientation using dime turns
+void Re_Orient(uint8_t Direction, uint8_t Profile_ID){
+	uint8_t ui8_Diff;
+
+	//get the max and the min directions here
+	if(Direction > cau16_Orientation[s_Track_Info.Orientation_Index]){
+		ui8_Diff = Direction - cau16_Orientation[s_Track_Info.Orientation_Index];
+		//adjust for overflow
+		ui8_Diff = 4 - ui8_Diff;
+	}
+	else{
+		ui8_Diff = cau16_Orientation[s_Track_Info.Orientation_Index] - Direction;
+	}
+
+	//actually do turns, here we always turn clockwise (right) except for case 3 where we turn couterclockwise (left)
+	switch(ui8_Diff){
+	case 1:
+		//do one turn clockwise
+		Turn(RIGHT,Profile_ID,DIME,STEPS_PER_DIME);
+		break;
+	case 2:
+		//do two turns clockwise
+		Turn(RIGHT,Profile_ID,DIME,STEPS_PER_DIME*2);
+		break;
+	case 3:
+		//do one turn counter-clockwise
+		Turn(LEFT,Profile_ID,DIME,STEPS_PER_DIME);
+		break;
+	default:
+		break;
+	}
+}
 
 //this just goes hoem based on direction and coordinates
 void Go_Home(void){
@@ -604,24 +696,7 @@ void Go_Home(void){
 
 	//NOTE: Extra logic here to prevent crash against west side wall, the north and east walls are kept far enough away from to not be a concern
 	//to accomplish this we will always turn to the west, and then make adjustments
-	switch(cau16_Orientation[s_Track_Info.Orientation_Index]){
-	case NORTH:
-		//get to west direction
-		Turn(LEFT,0,DIME,STEPS_PER_DIME);
-		break;
-	case EAST:
-		//get to south direction
-		Turn(RIGHT,0,DIME, STEPS_PER_DIME);
-		//get to west direction (could have it fall through to south but this is clearer)
-		Turn(RIGHT,0,DIME, STEPS_PER_DIME);
-		break;
-	case SOUTH:
-		//get to west direction
-		Turn(RIGHT,0,DIME,STEPS_PER_DIME);
-		break;
-	default:
-		break;
-	}
+	Re_Orient(WEST,0);
 
 	//do x translation
 	if(s_Track_Info.X_Steps > 0){

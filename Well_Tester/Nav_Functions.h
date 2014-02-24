@@ -18,6 +18,7 @@ void Go_Home(void);
 void Wait_For_Startup(void);
 void Hold_Until_Finished(void);
 void Start_Motor(uint8_t Motor_ID);
+void Final_Run(void);
 
 void Update_Track_Info(uint32_t Steps,
 					uint8_t Direction);
