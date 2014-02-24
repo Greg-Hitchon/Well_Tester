@@ -17,19 +17,26 @@
 
 
 //parameters
-#define STEPS_ADJUST_AIR		(300)
+//this is the number of steps to move forward after pumping before pumping air
+#define STEPS_ADJUST_AIR		(250)
+//moves this number of steps forward after the cup is found
 #define STEPS_ADJUST_FORWARD 	(50)
+//this is the number of steps the robot moves backwards after cup is found
 #define STEPS_ADJUST_BACKWARD 	(300)
+//used in the delay loop
 #define LOOP_DELAY				(100)
+//number of seconds to pump the liquid
 #define WET_PUMP_CYCLES			(10*16000000)
+//number of seconds to pump the air
 #define AIR_PUMP_CYCLES			(10*16000000)
+//number of seconds to wait before moving
 #define PAUSE_CYCLES			(5*16000000)
 
 //function declarations
 void Save_And_Pump(uint32_t Wait_Cycles);
 void Delay_For(uint32_t Wait_Cycles);
 
-
+//this is the function called once the cup has been found
 void Extract_Liquid(void){
 	//dependent on placement has to move forward more
 	if(STEPS_ADJUST_FORWARD > 0){
@@ -51,7 +58,7 @@ void Extract_Liquid(void){
 	__delay_cycles(PAUSE_CYCLES);
 }
 
-
+//saves motor state, turns off motors, pumps, turns on motors
 void Save_And_Pump(uint32_t Wait_Cycles){
 	uint16_t ui16_Save_Motors;
 
@@ -74,6 +81,7 @@ void Save_And_Pump(uint32_t Wait_Cycles){
 	P2OUT = ui16_Save_Motors;
 }
 
+//workaround for delays only allowing compile time constants
 void Delay_For(uint32_t Wait_Cycles){
 	uint32_t Num_Loops;
 	//do loop

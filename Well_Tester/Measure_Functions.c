@@ -27,14 +27,20 @@
 #include "cstbool.h"
 
 //macro definitions
-#define TICK_FREQUENCY 			(CLOCK_FREQ/8)
-#define TICK_RESOLUTION 		(10)
+
+//Constants used to determine behaviour of ultrasonic
+//this is the number of ticks in a period of the ultrasonic
 #define PULSE_PERIOD_TICKS 		(200000UL)
+//this is the high time of the ticks, corresponds to 10us
 #define PULSE_DURATION_TICKS	(20)
+//this is the value that the running average has to be less than for the ultrasonic to trigger a cup found
 #define CUP_FOUND_TICKS			(25000)
+//when keeping track of overflows case may be you have one overflow plus a few ticks that could be missed.  this bumps that up in order to catch all interrupts
 #define MIN_LEFTOVER_TICKS		(30)
+//this is the number of pulse durations to keep in the running sum array
 #define NUM_PULSE_AVG			(10)
 
+//constants used in the
 #define NUM_LIGHT_TEST 			(10)
 #define NUM_COND_TEST 			(10)
 #define NUM_VARIABILITY 		(10)
@@ -47,6 +53,7 @@ void Initialize_Counter(void);
 void Shutdown_Counter(void);
 
 //global variables
+//Mem: ~20 Bytes
 uint32_t gul_ADC_Total;
 uint16_t gul_Tick_Count, gui_ADC_Count, gui_ADC_Target, gui_Overflows_Remaining, gui_Overflow_Count, gui_Num_Leftover;
 uint8_t gui_Channel;
@@ -299,7 +306,7 @@ void Shutdown_Counter(void){
 
 //log2 function
 uint16_t cstlog2 (unsigned int val) {
-	uint16_t ret = -1;
+	uint16_t ret = 65535;
     while (val != 0) {
         val >>= 1;
         ret++;

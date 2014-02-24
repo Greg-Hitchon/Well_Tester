@@ -7,34 +7,46 @@
 #include "cstbool.h"
 #include "Bit_Definitions.h"
 
+//constant (from documentation)
 #define UART_DIVISOR (UINT16_C(1666))
+//delay between prints to prevent errors.  with no delays errors occur more frequently
 #define PRINT_DELAY (5000000)
 
+//function prototypes
 void Print_String(char *);
 unsigned int strlen(const char *);
 char * UINT_TO_STRING(uint16_t i);
 char * ULONG_TO_STRING(uint32_t i);
 
-
+//variables
+//Mem: ~10bytes
 char *Output_String;
 volatile bool vgb_Transmit_Complete = false;
 uint16_t i = 0;
 
+//initializes the serial registers
 void Setup_Comms(void)
 {
-  P1DIR |= BIT_TXD;                                     // All P1.x outputs
-  P1OUT &= ~BIT_TXD;                                    // All P1.x reset
-  P1SEL = BIT_TXD;                                      // P1.1 = RXD, P1.2=TXD
-  P1SEL2 = BIT_TXD;                                     // P1.1 = RXD, P1.2=TXD
-  
-  UCA0CTL1 |= UCSSEL_2;                                 // CLK = SMCLK
-  UCA0BR0 = UART_DIVISOR;                               // last 8 bits of 1666
-  UCA0BR1 = UART_DIVISOR >> 8;                          //first 8 bits of
-  UCA0MCTL =  UCBRS_6;                                   // Modulation UCBRSx = 6
-  UCA0CTL1 &= ~UCSWRST;                                 // **Initialize USCI state machine**
+	//set up the transmit bit
+	P1DIR |= BIT_TXD;
+	P1OUT &= ~BIT_TXD;
+	P1SEL = BIT_TXD;
+	P1SEL2 = BIT_TXD;
+
+	//set up the specific registers
+	//set clock to smclk
+	UCA0CTL1 |= UCSSEL_2;
+	//last 8 bits of 1666
+	UCA0BR0 = UART_DIVISOR;
+	//first 8 bits of
+	UCA0BR1 = UART_DIVISOR >> 8;
+	//Modulation UCBRSx = 6
+	UCA0MCTL =  UCBRS_6;
+	//Initialize USCI state machine
+	UCA0CTL1 &= ~UCSWRST;
 }
 
-
+//uses built in functions to simply print the name of the input result
 void Output_Result(uint8_t Liquid_Type){
 	//this is a simple function to print the liquid type out (not the best way of doing it but it works)
 	switch(Liquid_Type){
@@ -92,17 +104,15 @@ void Output_Result(uint8_t Liquid_Type){
 		break;
 	}
 }
-  //char *c_Tst1;
+
 void Print_UINT(uint16_t Value){
 
-  //c_Tst1 = UINT_TO_STRING(Value);
   //convert and use print string
   Print_String(UINT_TO_STRING(Value));
 }
 
 void Print_ULONG(uint32_t Value){
 
-  //c_Tst1 = UINT_TO_STRING(Value);
   //convert and use print string
   Print_String(ULONG_TO_STRING(Value));
 }
@@ -125,6 +135,7 @@ void Print_String(char *Output){
   }
 }
 
+//return length of a string (axiom)
 unsigned int strlen(const char *str)
 {
     const char *s;
@@ -132,6 +143,7 @@ unsigned int strlen(const char *str)
     return (s - str);
 }
 
+//convert uint to string (axiom)
 char * UINT_TO_STRING(uint16_t i)
 {
   static char buf[11];
@@ -144,6 +156,7 @@ char * UINT_TO_STRING(uint16_t i)
   return bp;
 }
 
+//convert ulong to string (axiom)
 char * ULONG_TO_STRING(uint32_t i)
 {
   static char buf[21];
@@ -156,7 +169,7 @@ char * ULONG_TO_STRING(uint32_t i)
   return bp;
 }
 
-// USCI A0/B0 Transmit ISR
+//Transmit ISR
 #pragma vector=USCIAB0TX_VECTOR
 __interrupt void USCI0TX_ISR(void)
 {

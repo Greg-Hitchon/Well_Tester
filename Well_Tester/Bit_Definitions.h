@@ -10,13 +10,20 @@
 #ifndef BIT_DEFINITIONS_H_
 #define BIT_DEFINITIONS_H_
 
-#define BIT_PUMP						(0x01)
+//bit specifications for input/output on msp
+#define BIT_PUMP						(BIT0)
+#define BIT_ECHO						(BIT1)
+#define BIT_TXD                         (BIT2)
+#define INPUT_CONDUCTIVITY				(BIT3)
+#define INPUT_LIGHT						(BIT5)
+#define BIT_TRIGGER						(BIT6)
 
-#define BIT_TXD                         (0x04)
 
+//turn directions (always forwards, ie cant do a backwards sweep)
 #define LEFT			 				(0x0)
 #define RIGHT 							(0x1)
-   
+
+//straight directions
 #define FORWARD                         (0x0)
 #define BACKWARD                        (0x1)
 
@@ -27,6 +34,7 @@
 #define BOTH_MOTORS 		        (LEFT_MOTOR+RIGHT_MOTOR)
 #define CONC_MOTOR					(LEFT_MOTOR)
 
+//numeric constants for input to set_motor function
 #define LEFT_FORWARD 		        (0x1)
 #define LEFT_BACKWARD 		        (0x2)
 #define RIGHT_FORWARD 		        (0x4)
@@ -36,22 +44,17 @@
 #define TURN_LEFT					(LEFT_BACKWARD+RIGHT_FORWARD)
 #define TURN_RIGHT					(LEFT_FORWARD+RIGHT_BACKWARD)
 
-#define BIT_TRIGGER					(BIT6)
-#define BIT_ECHO					(BIT1)
-//(BIT_LEFT_MOTOR+BIT_RIGHT_MOTOR)
-
+//numeric constants for turn types
 #define SWEEP						(0x1)
 #define DIME						(0x2)
 
-#define INPUT_RUN_TYPE				(0x20)
-#define INPUT_LIGHT					(0x20)
-#define INPUT_CONDUCTIVITY			(0x02)
-
+//numeric constants for direction
 #define NORTH						(0x1)
 #define EAST						(0x2)
 #define SOUTH						(0x4)
 #define WEST						(0x8)
 
+//numeric constants for liquid types (LT's)
 #define LT_ORANGE_JUICE				(0x1)
 #define LT_APPLE_JUICE				(0x2)
 #define LT_COKE						(0x3)
