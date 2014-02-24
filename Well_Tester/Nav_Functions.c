@@ -41,7 +41,7 @@ void Clear_State(uint8_t Motor_ID);
 
 //core preprocessor constants
 //cant have too many nav profiles as memory considerations happen fast
-#define NUM_NAV_PROFILES		(2)
+#define NUM_NAV_PROFILES		(3)
 //this has to be high enough that we dont miss the next step.  small enough not to make driving rough
 #define MIN_TICK_INCREMENT		(1000)
 //using half step so the phase count is 8
@@ -55,6 +55,10 @@ void Clear_State(uint8_t Motor_ID);
 #define ADJ_CLOCK_FREQ			((UINT32_C(CLOCK_FREQ))*UINT32_C(12500))
 //this should be equal to STEPS_PER_SWEEP/PI
 #define STEPS_XY_PER_SWEEP		(230)
+#define STEPS_TO_WALL_RUN		(500)
+#define STEPS_TO_BACK_UP_FIRST	(200)
+#define STEPS_TO_BACK_UP_SECOND	(300)
+
 //**********************************************************************************************************||
 //constants (calibration and system parameters)
 //**********************************************************************************************************||
@@ -603,10 +607,19 @@ void Go_Home(void){
 		//do x translation
 		Straight(FORWARD,s_Track_Info.X_Steps,0);
 
+		//drive into wall
+		Straight(FORWARD,STEPS_TO_WALL_RUN,2);
+		//back up from wall
+		Straight(BACKWARD,STEPS_TO_BACK_UP_FIRST,2);
+
 		//get to y direction
 		Turn(LEFT,0,DIME,STEPS_PER_DIME);
 		//do y translation
 		Straight(FORWARD,s_Track_Info.Y_Steps,0);
+		//drive into wall
+		Straight(FORWARD,STEPS_TO_WALL_RUN,2);
+		//back up from wall
+		Straight(BACKWARD,STEPS_TO_BACK_UP_SECOND,2);
 
 		break;
 	case EAST:
@@ -615,33 +628,59 @@ void Go_Home(void){
 		//do y translation
 		Straight(FORWARD,s_Track_Info.Y_Steps,0);
 
+		//drive into wall
+		Straight(FORWARD,STEPS_TO_WALL_RUN,2);
+		//back up from wall
+		Straight(BACKWARD,STEPS_TO_BACK_UP_FIRST,2);
+
 		//get to x direction
 		Turn(RIGHT,0,DIME, STEPS_PER_DIME);
 		//do x translation
 		Straight(FORWARD, s_Track_Info.X_Steps,0);
+		//drive into wall
+		Straight(FORWARD,STEPS_TO_WALL_RUN,2);
+		//back up from wall
+		Straight(BACKWARD,STEPS_TO_BACK_UP_SECOND,2);
 
 		break;
 	case SOUTH:
 		//do y translation
 		Straight(FORWARD,s_Track_Info.Y_Steps,0);
 
+		//drive into wall
+		Straight(FORWARD,STEPS_TO_WALL_RUN,2);
+		//back up from wall
+		Straight(BACKWARD,STEPS_TO_BACK_UP_FIRST,2);
+
 		if(s_Track_Info.X_Steps > 0){
 			//get to x direction
 			Turn(RIGHT,0,DIME, STEPS_PER_DIME);
 			//do x translation
 			Straight(FORWARD, s_Track_Info.X_Steps,0);
+			//drive into wall
+			Straight(FORWARD,STEPS_TO_WALL_RUN,2);
+			//back up from wall
+			Straight(BACKWARD,STEPS_TO_BACK_UP_SECOND,2);
 		}
 
 		break;
 	case WEST:
 		//do x translation
 		Straight(FORWARD,s_Track_Info.X_Steps,0);
+		//drive into wall
+		Straight(FORWARD,STEPS_TO_WALL_RUN,2);
+		//back up from wall
+		Straight(BACKWARD,STEPS_TO_BACK_UP_FIRST,2);
 
 		if(s_Track_Info.Y_Steps>0){
 			//get to y direction
 			Turn(LEFT,0,DIME,STEPS_PER_DIME);
 			//do y translation
 			Straight(FORWARD, s_Track_Info.Y_Steps,0);
+			//drive into wall
+			Straight(FORWARD,STEPS_TO_WALL_RUN,2);
+			//back up from wall
+			Straight(BACKWARD,STEPS_TO_BACK_UP_SECOND,2);
 		}
 	}
 

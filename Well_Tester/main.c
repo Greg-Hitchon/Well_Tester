@@ -66,8 +66,13 @@ void main(void) {
 	//initialize the tracking direction + distances
 	Initialize_Tracking();
 	//create all necessary profiles for navigation purposes
+	//main running profile
 	Create_Nav_Profile(0,4000,7500,5500,10,10,1,1);
+	//turn profile
 	Create_Nav_Profile(1,4000,6000,4000,10,10,1,1);
+	//adjust profile
+	Create_Nav_Profile(2,3000,3000,3000,10,10,1,1);
+
 	//execute algorithm
 	Final_Run();
 	//____________________________
