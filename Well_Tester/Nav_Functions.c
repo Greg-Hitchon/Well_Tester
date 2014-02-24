@@ -64,10 +64,21 @@ void Clear_State(uint8_t Motor_ID);
 //this is the number of steps to backup to center the robot in the sensing area
 #define STEPS_TO_BACK_UP_SECOND	(300)
 
+
+//**********************************************************************************************************||
+//function prototypes
+//**********************************************************************************************************||
+void Execute_Cross(uint8_t Starting_Side,
+					uint8_t Straight_ID,
+					uint8_t Turn_ID,
+					uint8_t Num_Crosses);
+
+void Re_Orient(uint8_t Direction,
+			uint8_t Profile_ID);
+
 //**********************************************************************************************************||
 //constants (calibration and system parameters)
 //**********************************************************************************************************||
-
 
 //This configuration implies:
 //Motor 1: a=Bit0, a'=Bit2; b=Bit1, b'=Bit3
@@ -644,7 +655,8 @@ void Execute_Cross(uint8_t Starting_Side,
 
 
 //this function takes a direction as an input and truns the robot to that orientation using dime turns
-void Re_Orient(uint8_t Direction, uint8_t Profile_ID){
+void Re_Orient(uint8_t Direction,
+			uint8_t Profile_ID){
 	uint8_t ui8_Diff;
 
 	//get the max and the min directions here

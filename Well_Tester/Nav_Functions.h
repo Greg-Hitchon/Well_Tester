@@ -46,5 +46,13 @@ void Set_Motor(	uint8_t Motor_ID,
 				uint32_t Steps,
 				uint8_t Profile_ID);
 
+void Execute_Cross(uint8_t Starting_Side,
+					uint8_t Straight_ID,
+					uint8_t Turn_ID,
+					uint8_t Num_Crosses);
+
+void Re_Orient(uint8_t Direction,
+			uint8_t Profile_ID);
+
 
 #endif /* NAV_FUNCTIONS_H_ */
