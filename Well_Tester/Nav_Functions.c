@@ -55,8 +55,11 @@ void Clear_State(uint8_t Motor_ID);
 #define ADJ_CLOCK_FREQ			((UINT32_C(CLOCK_FREQ))*UINT32_C(12500))
 //this should be equal to STEPS_PER_SWEEP/PI
 #define STEPS_XY_PER_SWEEP		(230)
+//this is the number of steps to move forward when running into the wall to straighten up.  try to keep small as possible
 #define STEPS_TO_WALL_RUN		(500)
+//this is the steps to backup from the wall running in order to be able to execute a dime turn
 #define STEPS_TO_BACK_UP_FIRST	(200)
+//this is the number of steps to backup to center the robot in the sensing area
 #define STEPS_TO_BACK_UP_SECOND	(300)
 
 //**********************************************************************************************************||
@@ -599,90 +602,49 @@ void Go_Home(void){
 	}
 
 
-	//reorient
+	//NOTE: Extra logic here to prevent crash against west side wall, the north and east walls are kept far enough away from to not be a concern
+	//to accomplish this we will always turn to the west, and then make adjustments
 	switch(cau16_Orientation[s_Track_Info.Orientation_Index]){
 	case NORTH:
-		//get to x direction
+		//get to west direction
 		Turn(LEFT,0,DIME,STEPS_PER_DIME);
-		//do x translation
-		Straight(FORWARD,s_Track_Info.X_Steps,0);
-
-		//drive into wall
-		Straight(FORWARD,STEPS_TO_WALL_RUN,2);
-		//back up from wall
-		Straight(BACKWARD,STEPS_TO_BACK_UP_FIRST,2);
-
-		//get to y direction
-		Turn(LEFT,0,DIME,STEPS_PER_DIME);
-		//do y translation
-		Straight(FORWARD,s_Track_Info.Y_Steps,0);
-		//drive into wall
-		Straight(FORWARD,STEPS_TO_WALL_RUN,2);
-		//back up from wall
-		Straight(BACKWARD,STEPS_TO_BACK_UP_SECOND,2);
-
 		break;
 	case EAST:
-		//get to y direction
+		//get to south direction
 		Turn(RIGHT,0,DIME, STEPS_PER_DIME);
-		//do y translation
-		Straight(FORWARD,s_Track_Info.Y_Steps,0);
-
-		//drive into wall
-		Straight(FORWARD,STEPS_TO_WALL_RUN,2);
-		//back up from wall
-		Straight(BACKWARD,STEPS_TO_BACK_UP_FIRST,2);
-
-		//get to x direction
+		//get to west direction (could have it fall through to south but this is clearer)
 		Turn(RIGHT,0,DIME, STEPS_PER_DIME);
-		//do x translation
-		Straight(FORWARD, s_Track_Info.X_Steps,0);
-		//drive into wall
-		Straight(FORWARD,STEPS_TO_WALL_RUN,2);
-		//back up from wall
-		Straight(BACKWARD,STEPS_TO_BACK_UP_SECOND,2);
-
 		break;
 	case SOUTH:
-		//do y translation
-		Straight(FORWARD,s_Track_Info.Y_Steps,0);
-
-		//drive into wall
-		Straight(FORWARD,STEPS_TO_WALL_RUN,2);
-		//back up from wall
-		Straight(BACKWARD,STEPS_TO_BACK_UP_FIRST,2);
-
-		if(s_Track_Info.X_Steps > 0){
-			//get to x direction
-			Turn(RIGHT,0,DIME, STEPS_PER_DIME);
-			//do x translation
-			Straight(FORWARD, s_Track_Info.X_Steps,0);
-			//drive into wall
-			Straight(FORWARD,STEPS_TO_WALL_RUN,2);
-			//back up from wall
-			Straight(BACKWARD,STEPS_TO_BACK_UP_SECOND,2);
-		}
-
+		//get to west direction
+		Turn(RIGHT,0,DIME,STEPS_PER_DIME);
 		break;
-	case WEST:
-		//do x translation
-		Straight(FORWARD,s_Track_Info.X_Steps,0);
-		//drive into wall
-		Straight(FORWARD,STEPS_TO_WALL_RUN,2);
-		//back up from wall
-		Straight(BACKWARD,STEPS_TO_BACK_UP_FIRST,2);
-
-		if(s_Track_Info.Y_Steps>0){
-			//get to y direction
-			Turn(LEFT,0,DIME,STEPS_PER_DIME);
-			//do y translation
-			Straight(FORWARD, s_Track_Info.Y_Steps,0);
-			//drive into wall
-			Straight(FORWARD,STEPS_TO_WALL_RUN,2);
-			//back up from wall
-			Straight(BACKWARD,STEPS_TO_BACK_UP_SECOND,2);
-		}
+	default:
+		break;
 	}
+
+	//do x translation
+	if(s_Track_Info.X_Steps > 0){
+		Straight(FORWARD,s_Track_Info.X_Steps,0);
+	}
+	//make adjustment for straightness
+	Straight(FORWARD,STEPS_TO_WALL_RUN,2);
+	//back up from wall
+	Straight(BACKWARD,STEPS_TO_BACK_UP_FIRST,2);
+
+	//turn to the y direction
+	Turn(LEFT,0,DIME,STEPS_PER_DIME);
+
+	//do y translation
+	if(s_Track_Info.Y_Steps > 0){
+		//do y translation
+		Straight(FORWARD, s_Track_Info.Y_Steps,0);
+	}
+	//make adjustment for straighness
+	Straight(FORWARD,STEPS_TO_WALL_RUN,2);
+	//back up from wall
+	Straight(BACKWARD,STEPS_TO_BACK_UP_SECOND,2);
+
 
 	//turn off motors
 	P2OUT = 0;
