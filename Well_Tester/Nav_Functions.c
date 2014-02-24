@@ -4,14 +4,16 @@
  *  Created on: Oct 16, 2013
  *      Author: Greg
  *
- *This file provides an easy method for running the motors
- *To run a motor the Set_Motor function then the Start_Motor function needs to be called
- *This is simplified by the "Straight" and "Turn" functions
+ * Below info Updated: February 24th 2014
  *
- *This function makes use of timer0 and the CCR0 interrupt and contains the
- *corresponding interrupt handling routine
+ * This file provides an easy method for running the motors
+ * To run a motor the Set_Motor function then the Start_Motor function needs to be called
+ * This is simplified by the "Straight" and "Turn" functions
  *
- *P2 is used for the motor output pins
+ * This function makes use of timer0 and the CCR0 interrupt and contains the
+ * corresponding interrupt handling routine
+ *
+ * P2 is used for the motor output pins
  */
 
 //**********************************************************************************************************||

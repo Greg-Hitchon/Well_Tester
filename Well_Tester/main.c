@@ -4,21 +4,24 @@
  * Created on: Oct 16, 2013
  *   Author: Greg
  *
- *This is where the program execution begins and ends.  It is broken up into 
- *the following sections: Setup, Navigation (interrupted with Extraction), Sensing, Communication
+ * Below info Updated: February 24th 2014
  *
- *The code is fairly procedural and should be easy to follow.
+ * This is where the program execution begins and ends.  It is broken up into
+ * the following files: Navigation, Sensing (cup+liquid), Communication, Extraction,
+ * Bit definitions, and Project Parameters
  *
- *The mapping of pinouts is as follows: 
- *PORT 1=1 TXD pin for UART, 2 Ports for Cup detection, 1 Port for Extraction, 2 For Sensing, 2 Undetermined
- *PORT 2=8 Motor outputs
+ * The basic flow of the code is to execute a set grid search pattern and wait for an interrupt from the
+ * cup sensor.  Once a full cup is detected the liquid is extracted and then the robot returns to the sensing area.
  *
+ * The current bit definitions can be seen in the "Bit_Definitions.h" file.
  *
- *TO DO LIST:
+ * Navigation: The actual motor movement is accomplished by outputting pulses to each motor phase as determined by a state array
  *
+ * Sensing: Full cups are found by time-averaging an ultrasonic signal and triggering an interrupt at a certain threshold value
  *
- *THINGS DEPENDENT ON CLOCK FREQUENCY:
- *-certain calculations may need to be adjusted (due to integer division/range issues) if clock freq is increased
+ * TO DO LIST:
+ * -Finalize sensing
+ * -test new navigation algo
  *
  *
  */

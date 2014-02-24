@@ -4,8 +4,10 @@
  *  Created on: Oct 20, 2013
  *      Author: Greg
  *
- *The goal of these functions is to encapsulate all functions and interrupts used to communicate with the
- *computer via serial protocol.  These functions provide the ability to transmit unsigned ints and strings
+ * Below info Updated: February 24th 2014
+ *
+ * The goal of these functions is to encapsulate all functions and interrupts used to communicate with the
+ * computer via serial protocol.  These functions provide the ability to transmit unsigned ints and strings
  */
 
 

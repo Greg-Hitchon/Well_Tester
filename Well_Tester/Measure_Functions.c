@@ -4,12 +4,14 @@
  *  Created on: Oct 20, 2013
  *      Author: Greg
  *
- *The goal of these functions is to provide an easy method of getting a consistent ADC
- *value or frequency reading from some input port
- *The ADC function allows for a continuous sample for some number of samples averaging the
- *return value over this interval.  
- *The Frequency function allows for some set number of target pulses to be recieved before using
- *the number of timerA cycles in that time period to find the relative frequency
+ * Below info Updated: February 24th 2014
+ *
+ * The goal of these functions is to provide an easy method of getting a consistent ADC
+ * value or frequency reading from some input port
+ * The ADC function allows for a continuous sample for some number of samples averaging the
+ * return value over this interval.
+ * The Frequency function allows for some set number of target pulses to be recieved before using
+ * the number of timerA cycles in that time period to find the relative frequency
  */
 
 
