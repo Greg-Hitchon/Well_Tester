@@ -50,10 +50,10 @@
 #define LINE						(0x4)
 
 //numeric constants for direction
-#define NORTH						(0x0)
-#define EAST						(0x40)
-#define SOUTH						(0x80)
-#define WEST						(0xC0)
+#define NORTH						UINT8_C(0)
+#define EAST						UINT8_C(64)
+#define SOUTH						UINT8_C(128)
+#define WEST						UINT8_C(192)
 
 //numeric constants for liquid types (LT's)
 #define LT_ORANGE_JUICE				(0x1)

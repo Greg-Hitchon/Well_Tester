@@ -52,6 +52,7 @@ void Execute_Cross(uint8_t Starting_Side,
 					uint8_t Num_Crosses);
 
 void Re_Orient(uint8_t Direction,
+			uint8_t Turn_Type,
 			uint8_t Profile_ID);
 
 

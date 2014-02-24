@@ -45,14 +45,17 @@ void Execute_Cross(uint8_t Starting_Side,
 					uint8_t Turn_ID,
 					uint8_t Num_Crosses);
 
+void Update_XY_Coords(uint32_t Steps,
+						uint8_t Direction);
+
 void Re_Orient(uint8_t Direction,
+			uint8_t Turn_Type,
 			uint8_t Profile_ID);
 
 void Start_Motor(uint8_t Motor_ID);
 void Hold_Until_Finished(void);
 void Update_State(uint8_t Motor_ID);
 void Go_Home(void);
-void Update_XY_Coords(uint32_t Steps, uint8_t Direction);
 void Clear_State(uint8_t Motor_ID);
 
 
@@ -77,7 +80,7 @@ void Clear_State(uint8_t Motor_ID);
 //this should be equal to STEPS_PER_SWEEP/PI
 #define STEPS_XY_PER_SWEEP		(230)
 //this is the number of steps to move forward when running into the wall to straighten up.  try to keep small as possible
-#define STEPS_TO_WALL_RUN		(500)
+#define STEPS_TO_WALL_RUN		(400)
 //this is the steps to backup from the wall running in order to be able to execute a dime turn
 #define STEPS_TO_BACK_UP_FIRST	(200)
 //this is the number of steps to backup to center the robot in the sensing area
@@ -90,7 +93,7 @@ void Clear_State(uint8_t Motor_ID);
 //This configuration implies:
 //Motor 1: a=Bit0, a'=Bit2; b=Bit1, b'=Bit3
 //Motor 2: a=Bit4, a'=Bit6; b=Bit5, b'=Bit7
-const uint16_t cau16_Orientation[4]={NORTH,EAST,SOUTH,WEST};
+const uint8_t cau8_Orientation[4]={NORTH,EAST,SOUTH,WEST};
 const uint8_t cch_State_Map[NUM_MOTORS][NUM_STATES] = {{BIT0,BIT3,BIT1,BIT0,BIT2,BIT1,BIT3,BIT2},{BIT4,BIT7,BIT5,BIT4,BIT6,BIT5,BIT7,BIT6}};
 
 
@@ -455,7 +458,7 @@ void Update_XY_Coords(uint32_t Steps,
 
 	if(Direction == FORWARD){
 		//adjust the coords based on steps taken in current movement
-		switch (cau16_Orientation[s_Track_Info.Orientation_Index]){
+		switch (cau8_Orientation[s_Track_Info.Orientation_Index]){
 		case NORTH:
 			s_Track_Info.Y_Steps += Steps;
 			break;
@@ -481,7 +484,7 @@ void Update_XY_Coords(uint32_t Steps,
 	}
 	else if (Direction == BACKWARD){
 		//adjust the coords based on steps taken in current movement
-		switch (cau16_Orientation[s_Track_Info.Orientation_Index]){
+		switch (cau8_Orientation[s_Track_Info.Orientation_Index]){
 		case NORTH:
 			if(s_Track_Info.Y_Steps >= Steps){
 				s_Track_Info.Y_Steps -= Steps;
@@ -561,6 +564,8 @@ void Turn(	uint8_t Direction,
 			uint8_t Profile_ID,
 			uint8_t Type,
 			uint32_t Steps){
+	//do the delay
+	__delay_cycles(DELAY_BETWEEN);
 
 	//to reverse turn mid-turn we need the direction and type
 	s_Track_Info.Is_Turning = true;
@@ -632,6 +637,9 @@ void Straight(	uint8_t Direction,
 	//indicate not turning here so know to update xy not turn info
 	s_Track_Info.Is_Turning = false;
 
+	//do the delay
+	__delay_cycles(DELAY_BETWEEN);
+
 	//actually set motors
 	if (Direction == FORWARD){
 		Set_Motor(BOTH_MOTORS,BOTH_FORWARD,Steps,Profile_ID);
@@ -654,6 +662,8 @@ void Final_Run(void){
 	const uint8_t i_Turn_Profile = 1, i_Straight_Profile = 0;
 	//go straight up the east wall
 	Straight(FORWARD,TABLE_LENGTH_STEPS,i_Straight_Profile);
+	//override the default "dime" turn by turning west with sweep originally
+	Re_Orient(WEST,SWEEP,i_Turn_Profile);
 	//execute 5 crosses
 	Execute_Cross(EAST,i_Straight_Profile,i_Turn_Profile,5);
 	//go home here if no cup is found
@@ -673,33 +683,21 @@ void Execute_Cross(uint8_t Starting_Side,
 
 	//do the loop
 	for(Cross_Tracker = Num_Crosses; Cross_Tracker > 0; Cross_Tracker--){
-		//delay for determined period
-		__delay_cycles(DELAY_BETWEEN);
-
 		//orient across the board and toggle the sides
 		if(Side_Tracker == EAST){
-			Re_Orient(WEST,Turn_ID);
+			Re_Orient(WEST,DIME,Turn_ID);
 			Side_Tracker = WEST;
 		}
 		else{
-			Re_Orient(EAST,Turn_ID);
+			Re_Orient(EAST,DIME,Turn_ID);
 			Side_Tracker = EAST;
 		}
-
-		//delay for determined period
-		__delay_cycles(DELAY_BETWEEN);
 
 		//go straight across the board
 		Straight(FORWARD,TABLE_WIDTH_STEPS,Straight_ID);
 
-		//delay for determined period
-		__delay_cycles(DELAY_BETWEEN);
-
 		//reorient to the south
-		Re_Orient(SOUTH,Turn_ID);
-
-		//delay for determined period
-		__delay_cycles(DELAY_BETWEEN);
+		Re_Orient(SOUTH,SWEEP,Turn_ID);
 
 		//move down the grid steps
 		Straight(FORWARD,GRID_STEPS,Straight_ID);
@@ -709,26 +707,34 @@ void Execute_Cross(uint8_t Starting_Side,
 
 //this function takes a direction as an input and truns the robot to that orientation using dime turns
 void Re_Orient(uint8_t Direction,
+			uint8_t Turn_Type,
 			uint8_t Profile_ID){
+	uint32_t Steps;
+
+	//ugly but have to get step count here
+	if(Turn_Type == DIME){
+		Steps=STEPS_PER_DIME;
+	}
+	else{
+		Steps=STEPS_PER_SWEEP;
+	}
+
 	//actually do turns, here we always turn clockwise (right) except for case 3 where we turn couterclockwise (left)
-	switch((Direction - cau16_Orientation[s_Track_Info.Orientation_Index])/64){
+	switch(UINT8_C(Direction - cau8_Orientation[s_Track_Info.Orientation_Index])/64){
 	case 1:
 		//do one turn clockwise
-		Turn(RIGHT,Profile_ID,DIME,STEPS_PER_DIME);
+		Turn(RIGHT,Profile_ID,Turn_Type,Steps);
 		break;
 	case 2:
 		//do one turn clockwise
-		Turn(RIGHT,Profile_ID,DIME,STEPS_PER_DIME);
-
-		//delay for determined period
-		__delay_cycles(DELAY_BETWEEN);
+		Turn(RIGHT,Profile_ID,Turn_Type,Steps);
 
 		//do one turn clockwise
-		Turn(RIGHT,Profile_ID,DIME,STEPS_PER_DIME);
+		Turn(RIGHT,Profile_ID,Turn_Type,Steps);
 		break;
 	case 3:
 		//do one turn counter-clockwise
-		Turn(LEFT,Profile_ID,DIME,STEPS_PER_DIME);
+		Turn(LEFT,Profile_ID,Turn_Type,Steps);
 		break;
 	default:
 		break;
@@ -755,7 +761,7 @@ void Go_Home(void){
 
 	//NOTE: Extra logic here to prevent crash against west side wall, the north and east walls are kept far enough away from to not be a concern
 	//to accomplish this we will always turn to the west, and then make adjustments
-	Re_Orient(WEST,0);
+	Re_Orient(WEST,DIME,0);
 
 	//do x translation
 	if(s_Track_Info.X_Steps > 0){
@@ -779,6 +785,10 @@ void Go_Home(void){
 	//back up from wall
 	Straight(BACKWARD,STEPS_TO_BACK_UP_SECOND,2);
 
+	//adjust so cup is within box
+	Re_Orient(WEST,DIME,0);
+	//delay a little to prevent it from rolling
+	__delay_cycles(8000000);
 
 	//turn off motors
 	P2OUT = 0;

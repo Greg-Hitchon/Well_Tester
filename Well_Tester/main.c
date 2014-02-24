@@ -82,7 +82,6 @@ void main(void) {
 	Create_Nav_Profile(1,4000,6000,4000,10,10,1,1);
 	//adjust profile
 	Create_Nav_Profile(2,3000,3000,3000,10,10,1,1);
-
 	//execute algorithm
 	Final_Run();
 	//____________________________
