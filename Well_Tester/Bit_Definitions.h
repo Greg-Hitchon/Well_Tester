@@ -4,7 +4,7 @@
  *  Created on: Oct 17, 2013
  *      Author: Greg
  *
- *      NOTE: All bit definitions are no bigger than 8 bits
+ *      NOTE: All bit definitions are no bigger than 8 bits unsigned or 0-255
  */
 
 #ifndef BIT_DEFINITIONS_H_
@@ -50,10 +50,10 @@
 #define LINE						(0x4)
 
 //numeric constants for direction
-#define NORTH						(0x1)
-#define EAST						(0x2)
-#define SOUTH						(0x3)
-#define WEST						(0x4)
+#define NORTH						(0x0)
+#define EAST						(0x40)
+#define SOUTH						(0x80)
+#define WEST						(0xC0)
 
 //numeric constants for liquid types (LT's)
 #define LT_ORANGE_JUICE				(0x1)

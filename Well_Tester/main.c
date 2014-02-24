@@ -1,16 +1,8 @@
-
-#include "Project_Parameters.h"
-#include TEST_CHIP
-#include <stdint.h>
-
-#include "Nav_Functions.h"
-#include "Bit_Definitions.h"
-#include "Measure_Functions.h"
-#include "Communication_Functions.h"
-#include "cstbool.h"
-
 /*
  * main.c
+ *
+ * Created on: Oct 16, 2013
+ *   Author: Greg
  *
  *This is where the program execution begins and ends.  It is broken up into 
  *the following sections: Setup, Navigation (interrupted with Extraction), Sensing, Communication
@@ -31,6 +23,28 @@
  *
  */
 
+//**********************************************************************************************************||
+//Syestem Headers
+//**********************************************************************************************************||
+#include "Project_Parameters.h"
+#include TEST_CHIP
+#include <stdint.h>
+
+//**********************************************************************************************************||
+//User Defined Headers
+//**********************************************************************************************************||
+#include "Nav_Functions.h"
+#include "Bit_Definitions.h"
+#include "Measure_Functions.h"
+#include "Communication_Functions.h"
+#include "cstbool.h"
+
+//**********************************************************************************************************||
+//Functions
+//**********************************************************************************************************||
+//This function section merely contains the main function that sets up different functions then executes
+//the main navigation algorithm
+//**********************************************************************************************************||
 
 void main(void) {
 	//***************************

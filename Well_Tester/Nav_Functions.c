@@ -14,23 +14,38 @@
  *P2 is used for the motor output pins
  */
 
-//syestem headers
+//**********************************************************************************************************||
+//Syestem Headers
+//**********************************************************************************************************||
 #include "Project_Parameters.h"
 #include TEST_CHIP
 #include <stdint.h>
 
-//user defined headers
+//**********************************************************************************************************||
+//User Defined Headers
+//**********************************************************************************************************||
 #include "Bit_Definitions.h"
 #include "Extraction_Functions.h"
 #include "Measure_Functions.h"
 #include "Communication_Functions.h"
 #include "cstbool.h"
 
-//function prototypes
+//**********************************************************************************************************||
+//Function Prototypes
+//**********************************************************************************************************||
 void Set_Motor(	uint8_t Motor_ID,
 				uint8_t Direction,
 				uint32_t Steps,
 				uint8_t Profile_ID);
+
+void Execute_Cross(uint8_t Starting_Side,
+					uint8_t Straight_ID,
+					uint8_t Turn_ID,
+					uint8_t Num_Crosses);
+
+void Re_Orient(uint8_t Direction,
+			uint8_t Profile_ID);
+
 void Start_Motor(uint8_t Motor_ID);
 void Hold_Until_Finished(void);
 void Update_State(uint8_t Motor_ID);
@@ -39,7 +54,9 @@ void Update_XY_Coords(uint32_t Steps, uint8_t Direction);
 void Clear_State(uint8_t Motor_ID);
 
 
-//core preprocessor constants
+//**********************************************************************************************************||
+//Compile time Constants
+//**********************************************************************************************************||
 //cant have too many nav profiles as memory considerations happen fast
 #define NUM_NAV_PROFILES		(3)
 //this has to be high enough that we dont miss the next step.  small enough not to make driving rough
@@ -49,7 +66,7 @@ void Clear_State(uint8_t Motor_ID);
 #define NUM_MOTORS				(2)
 //this is the number of steps used to make sure we dont run into the wall in the go_home algo
 #define STEPS_Y_ADJUST			(150)
-//delay between movement in the execute crosses algo
+//delay between movement in the movement algos
 #define DELAY_BETWEEN 			(5000)
 
 
@@ -66,20 +83,8 @@ void Clear_State(uint8_t Motor_ID);
 
 
 //**********************************************************************************************************||
-//function prototypes
+//Other Constants
 //**********************************************************************************************************||
-void Execute_Cross(uint8_t Starting_Side,
-					uint8_t Straight_ID,
-					uint8_t Turn_ID,
-					uint8_t Num_Crosses);
-
-void Re_Orient(uint8_t Direction,
-			uint8_t Profile_ID);
-
-//**********************************************************************************************************||
-//constants (calibration and system parameters)
-//**********************************************************************************************************||
-
 //This configuration implies:
 //Motor 1: a=Bit0, a'=Bit2; b=Bit1, b'=Bit3
 //Motor 2: a=Bit4, a'=Bit6; b=Bit5, b'=Bit7
@@ -87,11 +92,12 @@ const uint16_t cau16_Orientation[4]={NORTH,EAST,SOUTH,WEST};
 const uint8_t cch_State_Map[NUM_MOTORS][NUM_STATES] = {{BIT0,BIT3,BIT1,BIT0,BIT2,BIT1,BIT3,BIT2},{BIT4,BIT7,BIT5,BIT4,BIT6,BIT5,BIT7,BIT6}};
 
 
-//**********************************************************************************************************||
-//**********************************************************************************************************||
 
-//structs
+//**********************************************************************************************************||
+//Structs
+//**********************************************************************************************************||
 //Total mem: 2*50+2*30 + 10 = ~200 bytes.  less than half available used, so functions etc will be okay unless declaring large arrays/tons of vars
+//**********************************************************************************************************||
 
 //contains info for each motor when given a nav profile as well as a specific step count, number in memory is 2, one for each motor
 //Mem: ~50Bytes
@@ -126,19 +132,21 @@ struct Nav_Profile s_Nav_Profiles[NUM_NAV_PROFILES];
 struct Track_Info s_Track_Info;
 
 
-//variables
+//**********************************************************************************************************||
+//Variables
+//**********************************************************************************************************||
 //Mem: ~10 Bytes
+//**********************************************************************************************************||
+
 uint16_t caui_Last_State[2] ={NUM_STATES+1};
 uint8_t caui_State_Direction[2]={FORWARD};
 
 bool cub_Cup_Found = false, cub_Int_While_Turning = false;
 
 //**********************************************************************************************************||
-//core functions
+//Functions
 //**********************************************************************************************************||
-//these are the basic functions that allow the "composite functions" section to be built.
-//included functions set up motors parameters, save the current state, and restore the saved state
-//**********************************************************************************************************||
+//These are the basic functions that allow for motor driving and navigation algorithm
 //**********************************************************************************************************||
 
 //origin is at finish line with x axis across to start
@@ -440,13 +448,12 @@ void Hold_Until_Finished(void){
 }
 
 //**********************************************************************************************************||
-//composite functions
+//Composite Functions
 //**********************************************************************************************************||
 //these functions just package the basic functions into easier to use forms with common constants supplied
 //for typical behaviour (turn (left/right), straight (backwards/forwards)
 //NOTE: the coords are updated everytime for a full turn...this is because if interrupted the turn is still finished
 //with the remaining steps
-//**********************************************************************************************************||
 //**********************************************************************************************************||
 
 void Turn(	uint8_t Direction,
@@ -657,27 +664,21 @@ void Execute_Cross(uint8_t Starting_Side,
 //this function takes a direction as an input and truns the robot to that orientation using dime turns
 void Re_Orient(uint8_t Direction,
 			uint8_t Profile_ID){
-	uint8_t ui8_Diff;
-
-	//get the max and the min directions here
-	if(Direction > cau16_Orientation[s_Track_Info.Orientation_Index]){
-		ui8_Diff = Direction - cau16_Orientation[s_Track_Info.Orientation_Index];
-		//adjust for overflow
-		ui8_Diff = 4 - ui8_Diff;
-	}
-	else{
-		ui8_Diff = cau16_Orientation[s_Track_Info.Orientation_Index] - Direction;
-	}
-
 	//actually do turns, here we always turn clockwise (right) except for case 3 where we turn couterclockwise (left)
-	switch(ui8_Diff){
+	switch((Direction - cau16_Orientation[s_Track_Info.Orientation_Index])/64){
 	case 1:
 		//do one turn clockwise
 		Turn(RIGHT,Profile_ID,DIME,STEPS_PER_DIME);
 		break;
 	case 2:
-		//do two turns clockwise
-		Turn(RIGHT,Profile_ID,DIME,STEPS_PER_DIME*2);
+		//do one turn clockwise
+		Turn(RIGHT,Profile_ID,DIME,STEPS_PER_DIME);
+
+		//delay for determined period
+		__delay_cycles(DELAY_BETWEEN);
+
+		//do one turn clockwise
+		Turn(RIGHT,Profile_ID,DIME,STEPS_PER_DIME);
 		break;
 	case 3:
 		//do one turn counter-clockwise

@@ -13,20 +13,35 @@
  */
 
 
-
-
-//system includes
+//**********************************************************************************************************||
+//Syestem Headers
+//**********************************************************************************************************||
 #include "Project_Parameters.h"
 #include TEST_CHIP
 #include <stdint.h>
 
-//user defined includes
+
+//**********************************************************************************************************||
+//User Defined Headers
+//**********************************************************************************************************||
 #include "Nav_Functions.h"
 #include "Bit_Definitions.h"
 #include "Communication_Functions.h"
 #include "cstbool.h"
 
-//macro definitions
+
+//**********************************************************************************************************||
+//Function Prototypes
+//**********************************************************************************************************||
+uint16_t cstlog2(unsigned int);
+void Shutdown_Pulses(void);
+void Initialize_Counter(void);
+void Shutdown_Counter(void);
+
+
+//**********************************************************************************************************||
+//Compile time Constants
+//**********************************************************************************************************||
 
 //Constants used to determine behaviour of ultrasonic
 //this is the number of ticks in a period of the ultrasonic
@@ -40,25 +55,26 @@
 //this is the number of pulse durations to keep in the running sum array
 #define NUM_PULSE_AVG			(10)
 
-//constants used in the
+//constants used in the sensing unit
 #define NUM_LIGHT_TEST 			(10)
 #define NUM_COND_TEST 			(10)
 #define NUM_VARIABILITY 		(10)
 
 
-//function definitions
-uint16_t cstlog2(unsigned int);
-void Shutdown_Pulses(void);
-void Initialize_Counter(void);
-void Shutdown_Counter(void);
-
-//global variables
+//**********************************************************************************************************||
+//Variables
+//**********************************************************************************************************||
 //Mem: ~20 Bytes
+//**********************************************************************************************************||
 uint32_t gul_ADC_Total;
 uint16_t gul_Tick_Count, gui_ADC_Count, gui_ADC_Target, gui_Overflows_Remaining, gui_Overflow_Count, gui_Num_Leftover;
 uint8_t gui_Channel;
 bool gub_Counter_Running = false, gub_Pulse_Start = false;
    
+
+//**********************************************************************************************************||
+//Functions
+//**********************************************************************************************************||
 
 uint8_t Get_Result(void){
 	__delay_cycles(16000000);
@@ -333,6 +349,10 @@ __interrupt void ADC_ISR(void){
     __bic_SR_register_on_exit(CPUOFF);
   }
 }
+
+//**********************************************************************************************************||
+//Interrupts
+//**********************************************************************************************************||
 
 //this is used for the counter function
 #pragma vector=TIMER0_A0_VECTOR

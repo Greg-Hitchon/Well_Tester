@@ -1,22 +1,37 @@
 /*
  * Extraction_Functions.c
  *
- *  Created on: 2014-02-03
- *      Author: greg
+ *  Created on: Oct 20, 2013
+ *      Author: Greg
+ *
+ *The point of this file is to encapsulate all functions related to the actual extraction of the liquid
  */
 
-//system includes
+//**********************************************************************************************************||
+//Syestem Headers
+//**********************************************************************************************************||
 #include "Project_Parameters.h"
 #include TEST_CHIP
 #include <stdint.h>
 
 
-//user defined includes
+//**********************************************************************************************************||
+//User Defined Headers
+//**********************************************************************************************************||
 #include "Nav_Functions.h"
 #include "Bit_Definitions.h"
 
 
-//parameters
+//**********************************************************************************************************||
+//Function Prototypes
+//**********************************************************************************************************||
+void Save_And_Pump(uint32_t Wait_Cycles);
+void Delay_For(uint32_t Wait_Cycles);
+
+
+//**********************************************************************************************************||
+//Compile time Constants
+//**********************************************************************************************************||
 //this is the number of steps to move forward after pumping before pumping air
 #define STEPS_ADJUST_AIR		(250)
 //moves this number of steps forward after the cup is found
@@ -32,9 +47,10 @@
 //number of seconds to wait before moving
 #define PAUSE_CYCLES			(5*16000000)
 
-//function declarations
-void Save_And_Pump(uint32_t Wait_Cycles);
-void Delay_For(uint32_t Wait_Cycles);
+
+//**********************************************************************************************************||
+//Functions
+//**********************************************************************************************************||
 
 //this is the function called once the cup has been found
 void Extract_Liquid(void){

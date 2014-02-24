@@ -1,29 +1,60 @@
-//System includes
+/*
+ * Communications_Functions.c
+ *
+ *  Created on: Oct 20, 2013
+ *      Author: Greg
+ *
+ *The goal of these functions is to encapsulate all functions and interrupts used to communicate with the
+ *computer via serial protocol.  These functions provide the ability to transmit unsigned ints and strings
+ */
+
+
+//**********************************************************************************************************||
+//Syestem Headers
+//**********************************************************************************************************||
 #include "Project_Parameters.h"
 #include TEST_CHIP
 #include <stdint.h>
 
-//User defined includes
+
+//**********************************************************************************************************||
+//User Defined Headers
+//**********************************************************************************************************||
 #include "cstbool.h"
 #include "Bit_Definitions.h"
 
-//constant (from documentation)
-#define UART_DIVISOR (UINT16_C(1666))
-//delay between prints to prevent errors.  with no delays errors occur more frequently
-#define PRINT_DELAY (5000000)
 
-//function prototypes
+//**********************************************************************************************************||
+//Function Prototypes
+//**********************************************************************************************************||
 void Print_String(char *);
 unsigned int strlen(const char *);
 char * UINT_TO_STRING(uint16_t i);
 char * ULONG_TO_STRING(uint32_t i);
 
-//variables
-//Mem: ~10bytes
+
+//**********************************************************************************************************||
+//Compile time Constants
+//**********************************************************************************************************||
+//this constant is from documentation (tabled value given other parameters)
+#define UART_DIVISOR (UINT16_C(1666))
+//delay between prints to prevent errors.  with no delays errors occur more frequently
+#define PRINT_DELAY (5000000)
+
+
+//**********************************************************************************************************||
+//Variables
+//**********************************************************************************************************||
+//Mem: ~10 Bytes
+//**********************************************************************************************************||
 char *Output_String;
 volatile bool vgb_Transmit_Complete = false;
 uint16_t i = 0;
 
+
+//**********************************************************************************************************||
+//Functions
+//**********************************************************************************************************||
 //initializes the serial registers
 void Setup_Comms(void)
 {
@@ -169,6 +200,10 @@ char * ULONG_TO_STRING(uint32_t i)
   return bp;
 }
 
+
+//**********************************************************************************************************||
+//Interrupts
+//**********************************************************************************************************||
 //Transmit ISR
 #pragma vector=USCIAB0TX_VECTOR
 __interrupt void USCI0TX_ISR(void)
