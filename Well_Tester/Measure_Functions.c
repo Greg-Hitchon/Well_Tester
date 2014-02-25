@@ -44,8 +44,7 @@ void Shutdown_Counter(void);
 //**********************************************************************************************************||
 //Compile time Constants
 //**********************************************************************************************************||
-
-//Constants used to determine behaviour of ultrasonic
+//Ultrasonic Function
 //this is the number of ticks in a period of the ultrasonic
 #define PULSE_PERIOD_TICKS 		(200000UL)
 //this is the high time of the ticks, corresponds to 10us
@@ -57,7 +56,7 @@ void Shutdown_Counter(void);
 //this is the number of pulse durations to keep in the running sum array
 #define NUM_PULSE_AVG			(10)
 
-//constants used in the sensing unit
+//Sensing Unit Function
 #define NUM_LIGHT_TEST 			(10)
 #define NUM_COND_TEST 			(10)
 #define NUM_VARIABILITY 		(10)
@@ -77,7 +76,6 @@ bool gub_Counter_Running = false, gub_Pulse_Start = false;
 //**********************************************************************************************************||
 //Functions
 //**********************************************************************************************************||
-
 uint8_t Get_Result(void){
 	__delay_cycles(16000000);
 	return LT_MALT_VINEGAR;
@@ -251,7 +249,6 @@ ADC10AE0 = 0x0;
 //return value
 return UINT16_C(gul_ADC_Total/gui_ADC_Count);
 }
-
 
 
 //***********************************************************************************************************************************************
