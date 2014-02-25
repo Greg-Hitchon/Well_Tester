@@ -59,7 +59,10 @@ void main(void) {
 	BCSCTL1 = CALBC1_16MHZ;
 	DCOCTL = CALDCO_16MHZ;
 
-	//delay .25s for settle
+	//initialize startup bit configuration immediately to prevent jerking/unusual behaviour
+	Initialize_Bits();
+
+	//delay .25s to make sure nothing strange occurs
 	__delay_cycles(4000000);
 	//____________________________
 
@@ -67,23 +70,21 @@ void main(void) {
 	/*
 	//turn off motors
 		P2OUT = 0;
+		P2SEL = 0;
 		P2DIR = 0;
 		__enable_interrupt();
-	Get_Result();
-	//end temp
-	for(;;){}
+		Get_Result();
+		for(;;){}
 	 */
+	//end temp
 
 	//***************************
 	//NAVIGATION ALGO HERE
 	//***************************
 	//make sure interrupts are enabled
 	__enable_interrupt();
-
 	//start the ultrasonic sensing
 	Initialize_Pulses();
-	//initialize startup bit configuration
-	Initialize_Bits();
 	//initialize the tracking direction + distances
 	Initialize_Tracking();
 	//create all necessary profiles for navigation purposes

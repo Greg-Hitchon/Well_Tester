@@ -63,7 +63,7 @@ void Clear_State(uint8_t Motor_ID);
 //Compile time Constants
 //**********************************************************************************************************||
 //cant have too many nav profiles as memory considerations happen fast
-#define NUM_NAV_PROFILES		(4)
+#define NUM_NAV_PROFILES		(3)
 //this has to be high enough that we dont miss the next step.  small enough not to make driving rough
 #define MIN_TICK_INCREMENT		(1000)
 //using half step so the phase count is 8

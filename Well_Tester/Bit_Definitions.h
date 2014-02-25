@@ -50,6 +50,8 @@
 #define LINE						(0x4)
 
 //numeric constants for direction
+//NOTE: these need to remain the same in order for reorient function to work properly
+//Re-Orient relies on unsigned integer subtraction to determine what turns need to be made
 #define NORTH						UINT8_C(0)
 #define EAST						UINT8_C(64)
 #define SOUTH						UINT8_C(128)
