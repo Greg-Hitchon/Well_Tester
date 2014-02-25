@@ -72,7 +72,7 @@ void Clear_State(uint8_t Motor_ID);
 //this is the number of steps used to make sure we dont run into the wall in the go_home algo
 #define STEPS_Y_ADJUST			(150)
 //delay between movement in the movement algos
-#define DELAY_BETWEEN 			(5000)
+#define DELAY_BETWEEN 			(50000)
 
 
 //secondary (calculated) values
