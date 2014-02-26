@@ -59,22 +59,24 @@ void main(void) {
 	BCSCTL1 = CALBC1_16MHZ;
 	DCOCTL = CALDCO_16MHZ;
 
-	//initialize startup bit configuration immediately to prevent jerking/unusual behaviour
-	Initialize_Bits();
-
-	//delay .25s to make sure nothing strange occurs
-	__delay_cycles(4000000);
-	//____________________________
 
 	//temp
 	/*
 	//turn off motors
+	  	uint16_t Cond_Value, Light_Value, Var_Value;
+	 	uint8_t Liquid_Type;
 		P2OUT = 0;
 		P2SEL = 0;
 		P2DIR = 0;
 		__enable_interrupt();
-		Get_Result();
-		for(;;){}
+
+		//print to computer
+		for(;;){
+			//get result from sensing unit
+			Liquid_Type = Get_Result(&Cond_Value, &Light_Value, &Var_Value);
+			__delay_cycles(4000000);
+			Output_Result(&Liquid_Type,&Cond_Value,&Light_Value,&Var_Value);
+		}
 	 */
 	//end temp
 
@@ -83,6 +85,8 @@ void main(void) {
 	//***************************
 	//make sure interrupts are enabled
 	__enable_interrupt();
+	//initialize startup bit configuration
+	Initialize_Bits();
 	//start the ultrasonic sensing
 	Initialize_Pulses();
 	//initialize the tracking direction + distances

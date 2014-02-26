@@ -33,6 +33,7 @@ void Print_String(char *);
 unsigned int strlen(const char *);
 char * UINT_TO_STRING(uint16_t i);
 char * ULONG_TO_STRING(uint32_t i);
+void Print_UINT(uint16_t Value);
 
 
 //**********************************************************************************************************||
@@ -80,62 +81,76 @@ void Setup_Comms(void)
 }
 
 //uses built in functions to simply print the name of the input result
-void Output_Result(uint8_t Liquid_Type){
+void Output_Result(uint8_t *Liquid_Type,
+					uint16_t *Cond_Value,
+					uint16_t *Light_Value,
+					uint16_t *Var_Value){
+
+	//output raw numbers
+	Print_String("Actual Light Reading: ");
+	__delay_cycles(PRINT_DELAY);
+	Print_UINT(*Light_Value);
+	__delay_cycles(PRINT_DELAY);
+	Print_String("\r\n");
+	__delay_cycles(PRINT_DELAY);
+
+	Print_String("Actual Cond. Reading: ");
+	__delay_cycles(PRINT_DELAY);
+	Print_UINT(*Cond_Value);
+	__delay_cycles(PRINT_DELAY);
+	Print_String("\r\n");
+	__delay_cycles(PRINT_DELAY);
+
+	Print_String("Actual Volatility Reading: ");
+	__delay_cycles(PRINT_DELAY);
+	Print_UINT(*Var_Value);
+	__delay_cycles(PRINT_DELAY);
+	Print_String("\r\n");
+	__delay_cycles(PRINT_DELAY);
+
 	//this is a simple function to print the liquid type out (not the best way of doing it but it works)
-	switch(Liquid_Type){
+	Print_String("Liquid type: ");
+	__delay_cycles(PRINT_DELAY);
+
+	switch(*Liquid_Type){
 	case LT_APPLE_JUICE:
 		Print_String("Apple Juice");
-		__delay_cycles(PRINT_DELAY);
-		Print_String("\r\n");
 		break;
 	case LT_COKE:
 		Print_String("Coke");
-		__delay_cycles(PRINT_DELAY);
-		Print_String("\r\n");
 		break;
 	case LT_DISTILLED_WATER:
 		Print_String("Distilled Water");
-		__delay_cycles(PRINT_DELAY);
-		Print_String("\r\n");
 		break;
 	case LT_MALT_VINEGAR:
 		Print_String("Malt Vinegar");
-		__delay_cycles(PRINT_DELAY);
-		Print_String("\r\n");
 		break;
 	case LT_MINERAL_OIL:
 		Print_String("Mineral Oil");
-		__delay_cycles(PRINT_DELAY);
-		Print_String("\r\n");
 		break;
 	case LT_ORANGE_JUICE:
 		Print_String("Orange Juice");
-		__delay_cycles(PRINT_DELAY);
-		Print_String("\r\n");
 		break;
 	case LT_SALT_WATER:
 		Print_String("Salt Water");
-		__delay_cycles(PRINT_DELAY);
-		Print_String("\r\n");
 		break;
 	case LT_SUGAR_WATER:
 		Print_String("Sugar Water");
-		__delay_cycles(PRINT_DELAY);
-		Print_String("\r\n");
 		break;
 	case LT_VEGETABLE_OIL:
 		Print_String("Vegetable Oil");
-		__delay_cycles(PRINT_DELAY);
-		Print_String("\r\n");
 		break;
 	case LT_WHITE_VINEGAR:
 		Print_String("White Vinegar");
-		__delay_cycles(PRINT_DELAY);
-		Print_String("\r\n");
 		break;
 	default:
+		Print_String("ERROR 001-Liquid type number unknown.");
 		break;
 	}
+
+	//print next line
+	Print_String("\r\n\r\n");
+	__delay_cycles(PRINT_DELAY);
 }
 
 void Print_UINT(uint16_t Value){

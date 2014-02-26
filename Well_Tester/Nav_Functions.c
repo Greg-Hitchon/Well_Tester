@@ -515,6 +515,10 @@ void Update_XY_Coords(uint32_t Steps,
 //This function determines if the robot is turning and updates the tracking info accordingly
 //It then extracts the liquid then goes home
 void Cup_Found(void){
+	//declare local vars used to get sensing info
+	uint16_t Cond_Value, Light_Value, Var_Value;
+	uint8_t Liquid_Type = 0;
+
 	//updates flags and coords
 	cub_Cup_Found = true;
 
@@ -548,6 +552,15 @@ void Cup_Found(void){
 
 	//after adjustment we can just go home
 	Go_Home();
+
+	//get result from sensing unit
+	Liquid_Type = Get_Result(&Cond_Value, &Light_Value, &Var_Value);
+
+	//print to computer
+	for(;;){
+		__delay_cycles(4000000);
+		Output_Result(&Liquid_Type,&Cond_Value,&Light_Value,&Var_Value);
+	}
 }
 
 //**********************************************************************************************************||
@@ -728,7 +741,6 @@ void Re_Orient(uint8_t Direction,
 	case 2:
 		//do one turn clockwise
 		Turn(RIGHT,Profile_ID,Turn_Type,Steps);
-
 		//do one turn clockwise
 		Turn(RIGHT,Profile_ID,Turn_Type,Steps);
 		break;
@@ -743,8 +755,6 @@ void Re_Orient(uint8_t Direction,
 
 //this just goes hoem based on direction and coordinates
 void Go_Home(void){
-	uint8_t Liquid_Type = 0;
-
 	//change to false to prevent recursion
 	cub_Cup_Found = false;
 
@@ -787,20 +797,12 @@ void Go_Home(void){
 
 	//adjust so cup is within box
 	Re_Orient(WEST,DIME,0);
-	//delay a little to prevent it from rolling
+	//delay 0.5s to prevent robot from rolling
 	__delay_cycles(8000000);
 
 	//turn off motors
 	P2OUT = 0;
 	P2DIR = 0;
-
-	//get result from sensing unit
-	Liquid_Type = Get_Result();
-
-	//print to computer
-	for(;;){
-		Output_Result(Liquid_Type);
-	}
 }
 
 
