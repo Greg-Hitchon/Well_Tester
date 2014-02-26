@@ -553,12 +553,11 @@ void Cup_Found(void){
 	//after adjustment we can just go home
 	Go_Home();
 
-	//get result from sensing unit
-	Liquid_Type = Get_Result(&Cond_Value, &Light_Value, &Var_Value);
-
 	//print to computer
 	for(;;){
-		__delay_cycles(4000000);
+		//get result from sensing unit
+		Liquid_Type = Get_Result(&Cond_Value, &Light_Value, &Var_Value,10);
+		__delay_cycles(400000);
 		Output_Result(&Liquid_Type,&Cond_Value,&Light_Value,&Var_Value);
 	}
 }
@@ -771,7 +770,7 @@ void Go_Home(void){
 
 	//NOTE: Extra logic here to prevent crash against west side wall, the north and east walls are kept far enough away from to not be a concern
 	//to accomplish this we will always turn to the west, and then make adjustments
-	Re_Orient(WEST,DIME,0);
+	Re_Orient(WEST,DIME,1);
 
 	//do x translation
 	if(s_Track_Info.X_Steps > 0){
@@ -783,7 +782,7 @@ void Go_Home(void){
 	Straight(BACKWARD,STEPS_TO_BACK_UP_FIRST,2);
 
 	//turn to the y direction
-	Turn(LEFT,0,DIME,STEPS_PER_DIME);
+	Turn(LEFT,1,DIME,STEPS_PER_DIME);
 
 	//do y translation
 	if(s_Track_Info.Y_Steps > 0){

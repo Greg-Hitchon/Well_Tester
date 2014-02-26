@@ -79,7 +79,9 @@ bool gub_Counter_Running = false, gub_Pulse_Start = false;
 //**********************************************************************************************************||
 uint8_t Get_Result(uint16_t *Cond_Value,
 					uint16_t *Light_Value,
-					uint16_t *Var_Value){
+					uint16_t *Var_Value,
+					uint16_t Wait_Seconds){
+
 	bool b_Is_Light = false, b_Is_Volatile = false;
 	uint16_t i, ui_Last_Cond, ui_Current_Cond;
 
@@ -91,7 +93,7 @@ uint8_t Get_Result(uint16_t *Cond_Value,
 
 
 	//delay for 30s, get variability
-	for (i=0;i<30;i++){
+	for (i=0;i<Wait_Seconds;i++){
 		//delay 1sec
 			__delay_cycles(16000000);
 		//update last value 1s before the test begins

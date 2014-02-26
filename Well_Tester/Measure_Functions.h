@@ -15,7 +15,8 @@ unsigned int Analog_Read(uint8_t Channel,
 
 uint8_t Get_Result(uint16_t *Cond_Value,
 					uint16_t *Light_Value,
-					uint16_t *Var_Value);
+					uint16_t *Var_Value,
+					uint16_t Wait_Seconds);
 void Reset_Count(void);
 void Initialize_Pulses(void);
 bool Get_Pulse_Status(void);
