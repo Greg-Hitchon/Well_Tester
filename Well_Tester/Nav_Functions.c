@@ -90,11 +90,9 @@ void Clear_State(uint8_t Motor_ID);
 //**********************************************************************************************************||
 //Other Constants
 //**********************************************************************************************************||
-//This configuration implies:
-//Motor 1: a=Bit0, a'=Bit2; b=Bit1, b'=Bit3
-//Motor 2: a=Bit4, a'=Bit6; b=Bit5, b'=Bit7
+
 const uint8_t cau8_Orientation[4]={NORTH,EAST,SOUTH,WEST};
-const uint8_t cch_State_Map[NUM_MOTORS][NUM_STATES] = {{BIT0,BIT3,BIT1,BIT0,BIT2,BIT1,BIT3,BIT2},{BIT4,BIT7,BIT5,BIT4,BIT6,BIT5,BIT7,BIT6}};
+const uint8_t cch_State_Map[NUM_MOTORS][NUM_STATES] = {{LA1,LB2,LB1,LA1,LA2,LB1,LB2,LA2},{RA1,RB2,RB1,RA1,RA2,RB1,RB2,RA2}};
 
 
 //**********************************************************************************************************||
@@ -176,7 +174,7 @@ void Initialize_Bits(void){
 	P2SEL = 0x0;
 
 	//for each motor we need to set bits to the initial 0 state
-	P2OUT = BIT0 | BIT3 | BIT4 | BIT7;
+	P2OUT = LA1 | LB2 | RA1 | RB2;
 }
 
 //this dictates the target steps, speed etc.  This is used as a template to construct the navigation
@@ -551,7 +549,13 @@ void Cup_Found(void){
 	Extract_Liquid();
 
 	//after adjustment we can just go home
-	Go_Home();
+	//Go_Home();
+
+	//temp
+	//turn off motors
+	//P2OUT = 0;
+	//P2DIR = 0;
+	//temp
 
 	//print to computer
 	for(;;){

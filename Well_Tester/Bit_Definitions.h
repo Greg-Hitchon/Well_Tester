@@ -7,6 +7,8 @@
  *      NOTE: All bit definitions are no bigger than 8 bits unsigned or 0-255
  */
 
+#define PCB_MODE true
+
 #ifndef BIT_DEFINITIONS_H_
 #define BIT_DEFINITIONS_H_
 
@@ -18,6 +20,31 @@
 #define INPUT_LIGHT						(BIT5)
 #define BIT_TRIGGER						(BIT6)
 
+
+#if PCB_MODE == true
+//Current PCB
+#define LA1								(BIT0)
+#define LA2								(BIT2)
+#define LB1								(BIT1)
+#define LB2								(BIT6)
+
+#define RA1								(BIT3)
+#define RA2								(BIT4)
+#define RB1								(BIT7)
+#define RB2								(BIT5)
+
+#else
+//Current Breadboard
+#define LA1								(BIT0)
+#define LA2								(BIT2)
+#define LB1								(BIT1)
+#define LB2								(BIT3)
+
+#define RA1								(BIT4)
+#define RA2								(BIT6)
+#define RB1								(BIT5)
+#define RB2								(BIT7)
+#endif
 
 //turn directions (always forwards, ie cant do a backwards sweep)
 #define LEFT			 				(0x0)

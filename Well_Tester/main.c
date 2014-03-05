@@ -73,7 +73,7 @@ void main(void) {
 		//print to computer
 		for(;;){
 			//get result from sensing unit
-			Liquid_Type = Get_Result(&Cond_Value, &Light_Value, &Var_Value);
+			Liquid_Type = Get_Result(&Cond_Value, &Light_Value, &Var_Value,5);
 			__delay_cycles(4000000);
 			Output_Result(&Liquid_Type,&Cond_Value,&Light_Value,&Var_Value);
 		}
