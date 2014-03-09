@@ -47,11 +47,11 @@ void Shutdown_Counter(void);
 //**********************************************************************************************************||
 //Ultrasonic Function
 //this is the number of ticks in a period of the ultrasonic
-#define PULSE_PERIOD_TICKS 		(200000UL)
+#define PULSE_PERIOD_TICKS 		(300000UL)
 //this is the high time of the ticks, corresponds to 10us
 #define PULSE_DURATION_TICKS	(40)
 //this is the value that the running average has to be less than for the ultrasonic to trigger a cup found
-#define CUP_FOUND_TICKS			(20000)
+#define CUP_FOUND_TICKS			(25000)
 //when keeping track of overflows case may be you have one overflow plus a few ticks that could be missed.  this bumps that up in order to catch all interrupts
 #define MIN_LEFTOVER_TICKS		(30)
 //this is the number of pulse durations to keep in the running sum array
@@ -366,10 +366,10 @@ __interrupt void TIMER0_CCR0_ISR(void){
 						for(i=0;i<NUM_PULSE_AVG; i++){
 							Print_UINT((Time_Track[i]));
 							Print_String("\r\n");
-							__delay_cycles(500000);
 						}
 						*/
 						//end temp
+
 
 						Shutdown_Pulses();
 						Shutdown_Counter();

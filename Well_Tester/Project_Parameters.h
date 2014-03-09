@@ -7,9 +7,9 @@
 #define         CLOCK_FREQ              16000
 
 //navigation related
-#define 		TABLE_LENGTH_STEPS		2600
-#define 		TABLE_WIDTH_STEPS		2200
-#define			GRID_STEPS				160
+#define 		TABLE_LENGTH_STEPS		2500
+#define 		TABLE_WIDTH_STEPS		2100
+#define			GRID_STEPS				180
 #define 		STEPS_PER_SWEEP 		665
 #define 		STEPS_PER_DIME 			335
 

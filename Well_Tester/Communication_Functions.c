@@ -34,6 +34,7 @@ unsigned int strlen(const char *);
 char * UINT_TO_STRING(uint16_t i);
 char * ULONG_TO_STRING(uint32_t i);
 void Print_UINT(uint16_t Value);
+void Shutdown_Comms(void);
 
 
 //**********************************************************************************************************||
@@ -42,7 +43,7 @@ void Print_UINT(uint16_t Value);
 //this constant is from documentation (tabled value given other parameters)
 #define UART_DIVISOR (UINT16_C(1666))
 //delay between prints to prevent errors.  with no delays errors occur more frequently
-#define PRINT_DELAY (5000000)
+#define PRINT_DELAY (500000)
 
 
 //**********************************************************************************************************||
@@ -53,6 +54,7 @@ void Print_UINT(uint16_t Value);
 char *Output_String;
 volatile bool vgb_Transmit_Complete = false;
 uint16_t i = 0;
+bool gb_Comms_Setup = false;
 
 
 //**********************************************************************************************************||
@@ -80,6 +82,12 @@ void Setup_Comms(void)
 	UCA0CTL1 &= ~UCSWRST;
 }
 
+//shutdown the transmission by setting the following bit
+void Shutdown_Comms(void){
+	UCA0CTL1 |= UCSWRST;
+}
+
+
 //uses built in functions to simply print the name of the input result
 void Output_Result(uint8_t *Liquid_Type,
 					uint16_t *Cond_Value,
@@ -88,29 +96,27 @@ void Output_Result(uint8_t *Liquid_Type,
 
 	//output raw numbers
 	Print_String("Actual Light Reading: ");
-	__delay_cycles(PRINT_DELAY);
+
 	Print_UINT(*Light_Value);
-	__delay_cycles(PRINT_DELAY);
+
 	Print_String("\r\n");
-	__delay_cycles(PRINT_DELAY);
+
 
 	Print_String("Actual Cond. Reading: ");
-	__delay_cycles(PRINT_DELAY);
+
 	Print_UINT(*Cond_Value);
-	__delay_cycles(PRINT_DELAY);
+
 	Print_String("\r\n");
-	__delay_cycles(PRINT_DELAY);
+
 
 	Print_String("Actual Volatility Reading: ");
-	__delay_cycles(PRINT_DELAY);
+
 	Print_UINT(*Var_Value);
-	__delay_cycles(PRINT_DELAY);
+
 	Print_String("\r\n");
-	__delay_cycles(PRINT_DELAY);
 
 	//this is a simple function to print the liquid type out (not the best way of doing it but it works)
 	Print_String("Liquid type: ");
-	__delay_cycles(PRINT_DELAY);
 
 	switch(*Liquid_Type){
 	case LT_APPLE_JUICE:
@@ -150,7 +156,6 @@ void Output_Result(uint8_t *Liquid_Type,
 
 	//print next line
 	Print_String("\r\n\r\n");
-	__delay_cycles(PRINT_DELAY);
 }
 
 void Print_UINT(uint16_t Value){
@@ -166,8 +171,16 @@ void Print_ULONG(uint32_t Value){
 }
 
 void Print_String(char *Output){
-  //setup communication module (always do this just in case)
-  Setup_Comms();
+	//setup communication module (always do this just in case)
+	if(!gb_Comms_Setup){
+	  Setup_Comms();
+	  gb_Comms_Setup = true;
+	}
+
+	//always delay for things to settle
+	__delay_cycles(PRINT_DELAY);
+
+
   //transfer flag initialization
   vgb_Transmit_Complete = false;
   //assign to global var
@@ -181,6 +194,9 @@ void Print_String(char *Output){
   
   while(vgb_Transmit_Complete == false){
   }
+
+  //turn off
+  //Shutdown_Comms();
 }
 
 //return length of a string (axiom)

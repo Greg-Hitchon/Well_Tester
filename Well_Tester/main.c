@@ -59,6 +59,8 @@ void main(void) {
 	BCSCTL1 = CALBC1_16MHZ;
 	DCOCTL = CALDCO_16MHZ;
 
+	//settle time
+	__delay_cycles(32000000);
 
 	//temp
 	/*
@@ -99,6 +101,8 @@ void main(void) {
 	*/
 	//end temp
 
+	//configure all of port 1 for input (does not do anything of note)
+	P1DIR &= ~0xFF;
 
 	//initialize startup bit configuration
 	Initialize_Bits();
