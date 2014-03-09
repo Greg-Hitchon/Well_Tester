@@ -49,9 +49,9 @@ void Shutdown_Counter(void);
 //this is the number of ticks in a period of the ultrasonic
 #define PULSE_PERIOD_TICKS 		(200000UL)
 //this is the high time of the ticks, corresponds to 10us
-#define PULSE_DURATION_TICKS	(20)
+#define PULSE_DURATION_TICKS	(40)
 //this is the value that the running average has to be less than for the ultrasonic to trigger a cup found
-#define CUP_FOUND_TICKS			(25000)
+#define CUP_FOUND_TICKS			(20000)
 //when keeping track of overflows case may be you have one overflow plus a few ticks that could be missed.  this bumps that up in order to catch all interrupts
 #define MIN_LEFTOVER_TICKS		(30)
 //this is the number of pulse durations to keep in the running sum array
@@ -329,6 +329,7 @@ __interrupt void TIMER0_CCR0_ISR(void){
 	static uint16_t Time_Track[NUM_PULSE_AVG] = {0}, Last_Time = 0, Tmp_Time;
 	static uint8_t Time_Ind=0, Last_Ind;
 	static bool Pulse_Start = true, Test_Pulse = false, Valid_Edge = true;
+	uint16_t i=0;
 
 		//actualy do store/test
 		if(!Pulse_Start){
@@ -345,6 +346,7 @@ __interrupt void TIMER0_CCR0_ISR(void){
 				Time_Track[Last_Ind] = Tmp_Time - Last_Time;
 				Time_Sum += UINT32_C(Time_Track[Last_Ind]);
 
+
 				//get new index
 				if(++Time_Ind == NUM_PULSE_AVG){
 					//reset the index
@@ -359,6 +361,16 @@ __interrupt void TIMER0_CCR0_ISR(void){
 				if(Test_Pulse){
 					//check if done
 					if(Time_Sum < CUP_FOUND_TICKS){
+						//temp
+						/*
+						for(i=0;i<NUM_PULSE_AVG; i++){
+							Print_UINT((Time_Track[i]));
+							Print_String("\r\n");
+							__delay_cycles(500000);
+						}
+						*/
+						//end temp
+
 						Shutdown_Pulses();
 						Shutdown_Counter();
 						Cup_Found();

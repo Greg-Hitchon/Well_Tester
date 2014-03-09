@@ -57,6 +57,7 @@ void Hold_Until_Finished(void);
 void Update_State(uint8_t Motor_ID);
 void Go_Home(void);
 void Clear_State(uint8_t Motor_ID);
+void Disable_Motors(void);
 
 
 //**********************************************************************************************************||
@@ -151,6 +152,13 @@ bool cub_Cup_Found = false, cub_Int_While_Turning = false;
 //**********************************************************************************************************||
 //These are the basic functions that allow for motor driving and navigation algorithm
 //**********************************************************************************************************||
+
+//this function puts all outputs to ground so no current flows through motors
+void Disable_Motors(void){
+	P2OUT = 0;
+	P2DIR &= ~0xFF;
+	P2SEL = 0x0;
+}
 
 //origin is at finish line with x axis across to start
 //north is along positive y axis, east along positive x axis
@@ -549,13 +557,7 @@ void Cup_Found(void){
 	Extract_Liquid();
 
 	//after adjustment we can just go home
-	//Go_Home();
-
-	//temp
-	//turn off motors
-	//P2OUT = 0;
-	//P2DIR = 0;
-	//temp
+	Go_Home();
 
 	//print to computer
 	for(;;){
@@ -804,8 +806,7 @@ void Go_Home(void){
 	__delay_cycles(8000000);
 
 	//turn off motors
-	P2OUT = 0;
-	P2DIR = 0;
+	Disable_Motors();
 }
 
 

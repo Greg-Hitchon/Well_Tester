@@ -13,12 +13,12 @@
 #define BIT_DEFINITIONS_H_
 
 //bit specifications for input/output on msp
-#define BIT_PUMP						(BIT0)
+#define BIT_PUMP						(BIT5)
 #define BIT_ECHO						(BIT1)
 #define BIT_TXD                         (BIT2)
-#define INPUT_CONDUCTIVITY				(BIT3)
-#define INPUT_LIGHT						(BIT5)
-#define BIT_TRIGGER						(BIT6)
+#define INPUT_CONDUCTIVITY				(BIT4)
+#define INPUT_LIGHT						(BIT6)
+#define BIT_TRIGGER						(BIT3)
 
 
 #if PCB_MODE == true

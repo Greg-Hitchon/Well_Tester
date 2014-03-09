@@ -85,6 +85,21 @@ void main(void) {
 	//***************************
 	//make sure interrupts are enabled
 	__enable_interrupt();
+
+	//temp
+	/*
+	//make sure motors are off
+	Disable_Motors();
+	//start the ultrasonic sensing
+	//Initialize_Pulses();
+	P1DIR = BIT_PUMP;
+	P1OUT = BIT_PUMP;
+	for(;;){}
+	__bis_SR_register(CPUOFF + GIE);
+	*/
+	//end temp
+
+
 	//initialize startup bit configuration
 	Initialize_Bits();
 	//start the ultrasonic sensing
