@@ -43,7 +43,7 @@ void Delay_For(uint32_t Wait_Cycles);
 //used in the delay loop
 #define LOOP_DELAY				(100)
 //number of seconds to pump the liquid
-#define WET_PUMP_CYCLES			(10*16000000)
+#define WET_PUMP_CYCLES			(4*16000000)
 //number of seconds to pump the air
 #define AIR_PUMP_CYCLES			(10*16000000)
 //number of seconds to wait before moving

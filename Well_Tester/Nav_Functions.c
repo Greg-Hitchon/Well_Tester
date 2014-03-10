@@ -79,14 +79,20 @@ void Disable_Motors(void);
 //secondary (calculated) values
 #define ADJ_CLOCK_FREQ			((UINT32_C(CLOCK_FREQ))*UINT32_C(12500))
 //this should be equal to STEPS_PER_SWEEP/PI
-#define STEPS_XY_PER_SWEEP		(230)
-//this is the number of steps to move forward when running into the wall to straighten up.  try to keep small as possible
-#define STEPS_TO_WALL_RUN		(400)
+#define STEPS_XY_PER_SWEEP		(240)
 //this is the steps to backup from the wall running in order to be able to execute a dime turn
-#define STEPS_TO_BACK_UP_FIRST	(200)
+#define STEPS_TO_BACK_UP_FIRST	(250)
 //this is the number of steps to backup to center the robot in the sensing area
 #define STEPS_TO_BACK_UP_SECOND	(300)
+//this controls the backing up to avoid the double cup problem
+#define STEPS_TO_BACKUP_DOUBLE_CUP (650)
+//this makes it so the robot is reasonably far away from the west wall before the double cup adjustment
+#define STEPS_TO_ADJUST_X_DOUBLE_CUP (200)
 
+//this is the number of steps to move forward when running into the wall to straighten up.  try to keep small as possible
+#define STEPS_TO_WALL_RUN		(550+STEPS_TO_ADJUST_X_DOUBLE_CUP)
+//this is the number of steps to move forward when running into the wall to straighten up.  try to keep small as possible
+#define STEPS_TO_WALL_RUN_2		(300)
 
 //**********************************************************************************************************||
 //Other Constants
@@ -780,15 +786,26 @@ void Go_Home(void){
 
 	//do x translation
 	if(s_Track_Info.X_Steps > 0){
-		Straight(FORWARD,s_Track_Info.X_Steps,0);
+		if(s_Track_Info.X_Steps >STEPS_TO_ADJUST_X_DOUBLE_CUP){
+			Straight(FORWARD,s_Track_Info.X_Steps - STEPS_TO_ADJUST_X_DOUBLE_CUP,0);
+		}
+		else if(s_Track_Info.X_Steps < STEPS_TO_ADJUST_X_DOUBLE_CUP){
+			Straight(FORWARD,STEPS_TO_ADJUST_X_DOUBLE_CUP - s_Track_Info.X_Steps,0);
+		}
 	}
+
+	//This is to solve the double cup issue
+	Turn(RIGHT,1,DIME,STEPS_PER_DIME);
+	Straight(BACKWARD,STEPS_TO_BACKUP_DOUBLE_CUP,0);
+	Turn(LEFT,1,DIME,STEPS_PER_DIME);
+
 	//make adjustment for straightness
 	Straight(FORWARD,STEPS_TO_WALL_RUN,2);
 	//back up from wall
 	Straight(BACKWARD,STEPS_TO_BACK_UP_FIRST,2);
 
 	//turn to the y direction
-	Turn(LEFT,1,DIME,STEPS_PER_DIME);
+	Re_Orient(SOUTH,DIME,1);
 
 	//do y translation
 	if(s_Track_Info.Y_Steps > 0){
@@ -796,7 +813,7 @@ void Go_Home(void){
 		Straight(FORWARD, s_Track_Info.Y_Steps,0);
 	}
 	//make adjustment for straighness
-	Straight(FORWARD,STEPS_TO_WALL_RUN,2);
+	Straight(FORWARD,STEPS_TO_WALL_RUN_2,2);
 	//back up from wall
 	Straight(BACKWARD,STEPS_TO_BACK_UP_SECOND,2);
 

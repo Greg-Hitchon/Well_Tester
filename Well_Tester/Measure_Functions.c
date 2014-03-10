@@ -47,7 +47,7 @@ void Shutdown_Counter(void);
 //**********************************************************************************************************||
 //Ultrasonic Function
 //this is the number of ticks in a period of the ultrasonic
-#define PULSE_PERIOD_TICKS 		(300000UL)
+#define PULSE_PERIOD_TICKS 		(200000UL)
 //this is the high time of the ticks, corresponds to 10us
 #define PULSE_DURATION_TICKS	(40)
 //this is the value that the running average has to be less than for the ultrasonic to trigger a cup found
