@@ -150,7 +150,7 @@ struct Track_Info s_Track_Info;
 uint16_t caui_Last_State[2] ={NUM_STATES+1};
 uint8_t caui_State_Direction[2]={FORWARD};
 
-bool cub_Cup_Found = false, cub_Int_While_Turning = false, cub_Timer_Set = false;
+bool cub_Cup_Found = false, cub_Int_While_Turning = false;
 
 
 //**********************************************************************************************************||
@@ -442,10 +442,8 @@ void Start_Motor(uint8_t Motor_ID){
 	}
 
 	//do this initialization every time just in case
-	if(!cub_Timer_Set){
-		Set_Timer();
-		cub_Timer_Set = true;
-	}
+	Set_Timer();
+
 	//here we set the bit states specified by the "settings" struct
 	if (Motor_ID & LEFT_MOTOR){
 		TA1CCR1 = s_Cur_Motor_State[LEFT].Num_Leftover;
@@ -591,7 +589,7 @@ void Turn(	uint8_t Direction,
 			uint8_t Type,
 			uint32_t Steps){
 	//do the delay
-	//__delay_cycles(DELAY_BETWEEN);
+	__delay_cycles(DELAY_BETWEEN);
 
 	//to reverse turn mid-turn we need the direction and type
 	s_Track_Info.Is_Turning = true;
@@ -664,7 +662,7 @@ void Straight(	uint8_t Direction,
 	s_Track_Info.Is_Turning = false;
 
 	//do the delay
-	//__delay_cycles(DELAY_BETWEEN);
+	__delay_cycles(DELAY_BETWEEN);
 
 	//actually set motors
 	if (Direction == FORWARD){
@@ -840,6 +838,21 @@ void Go_Home(void){
 //**********************************************************************************************************||
 
 
+//all port 1 interrupts, controls startup and cup locating
+#pragma vector=PORT1_VECTOR
+__interrupt void PORT1_ISR(void){
+	  //clear fgs
+	  P1IFG = 0x0;
+}
+
+
+//flag is auto reset
+#pragma vector=TIMER1_A0_VECTOR
+__interrupt void TIMER1_CCRO_ISR(void){
+	//interrupt flags are reset automatically
+	__no_operation();
+}
+
 //clear flag here, also updates the motors as determined by the current motor state structs
 #pragma vector=TIMER1_A1_VECTOR
 __interrupt void TIMER1_OTHER_ISR(void){
@@ -864,7 +877,6 @@ __interrupt void TIMER1_OTHER_ISR(void){
 	default: break;
 	}
 
-
 	//update selected motor
 	if(b_Do_Update){
 		//"overflow" means one full timer count in this case 2^16
@@ -876,7 +888,6 @@ __interrupt void TIMER1_OTHER_ISR(void){
 
 				//actually update pins here
 				Update_State(ui_Motor_Index);
-
 
 				//update period here if necessary
 				if ((s_Cur_Motor_State[ui_Motor_Index].Has_ACC) &&
@@ -935,7 +946,6 @@ __interrupt void TIMER1_OTHER_ISR(void){
 				else{
 					TA1CCR2 += s_Cur_Motor_State[ui_Motor_Index].Num_Leftover;
 				}
-
 			}
 			else{
 				//if we get here current command is done so turn off necessary motors
@@ -970,7 +980,6 @@ __interrupt void TIMER1_OTHER_ISR(void){
 			s_Cur_Motor_State[ui_Motor_Index].Overflows_Remaining--;
 		}
 	}
-
 	//clear flag
 	TA1CTL &= ~TAIFG;
 }

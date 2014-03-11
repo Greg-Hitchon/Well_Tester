@@ -115,7 +115,6 @@ void main(void) {
 	Create_Nav_Profile(0,4000,7500,5500,10,10,1,1);
 	//turn profile
 	Create_Nav_Profile(1,3500,3500,3500,10,10,1,1);
-	//Create_Nav_Profile(1,5500,5500,5500,10,10,1,1);
 	//adjust profile
 	Create_Nav_Profile(2,3000,3000,3000,10,10,1,1);
 	//execute algorithm

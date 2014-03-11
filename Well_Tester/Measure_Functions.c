@@ -274,7 +274,7 @@ void Initialize_Counter(void){
 	//set up timera (continuous mode, source: smclk, clear, interrupts enabled, divide by 8)
 	//Divide by 8 here is necessary as if not used the taccr1 misses the increment
 	//and the frequency is then 1/full clock cycle (65535)
-	TA0CTL = TASSEL_2 | MC_2 | TACLR | ID_3;
+	TA0CTL = TASSEL_2 | MC_2 | TACLR | ID_2;
 
 	//show running
 	gub_Counter_Running = true;
