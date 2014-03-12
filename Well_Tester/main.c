@@ -101,8 +101,9 @@ void main(void) {
 	*/
 	//end temp
 
-	//configure all of port 1 for input (does not do anything of note)
-	P1DIR &= ~0xFF;
+	//configure all of port 1 for output (does not do anything of note)
+	P1DIR |= 0xFF;
+	P1OUT = 0x0;
 
 	//initialize startup bit configuration
 	Initialize_Bits();
