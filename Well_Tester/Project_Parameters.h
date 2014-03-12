@@ -10,8 +10,10 @@
 #define 		TABLE_LENGTH_STEPS		2500
 #define 		TABLE_WIDTH_STEPS		2100
 #define			GRID_STEPS				200
-#define 		STEPS_PER_SWEEP 		665
+#define 		STEPS_PER_SWEEP 		675
+//last 335
 #define 		STEPS_PER_DIME 			335
+
 
 //sensing related
 #define 		LIGHT_THRESHOLD			700
