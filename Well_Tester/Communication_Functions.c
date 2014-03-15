@@ -91,8 +91,7 @@ void Shutdown_Comms(void){
 //uses built in functions to simply print the name of the input result
 void Output_Result(uint8_t *Liquid_Type,
 					uint16_t *Cond_Value,
-					uint16_t *Light_Value,
-					uint16_t *Var_Value){
+					uint16_t *Light_Value){
 
 	//output raw numbers
 	Print_String("Actual Light Reading: ");
@@ -105,13 +104,6 @@ void Output_Result(uint8_t *Liquid_Type,
 	Print_String("Actual Cond. Reading: ");
 
 	Print_UINT(*Cond_Value);
-
-	Print_String("\r\n");
-
-
-	Print_String("Actual Volatility Reading: ");
-
-	Print_UINT(*Var_Value);
 
 	Print_String("\r\n");
 

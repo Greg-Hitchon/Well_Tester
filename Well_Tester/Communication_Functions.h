@@ -5,8 +5,7 @@
 
 void Output_Result(uint8_t *Liquid_Type,
 					uint16_t *Cond_Value,
-					uint16_t *Light_Value,
-					uint16_t *Var_Value);
+					uint16_t *Light_Value);
 void Setup_Comms(void);
 void Shutdown_Comms(void);
 void Print_String(char *);

@@ -79,59 +79,29 @@ bool gub_Counter_Running = false, gub_Pulse_Start = false;
 //**********************************************************************************************************||
 uint8_t Get_Result(uint16_t *Cond_Value,
 					uint16_t *Light_Value,
-					uint16_t *Var_Value,
 					uint16_t Wait_Seconds){
 
-	bool b_Is_Light = false, b_Is_Volatile = false;
-	uint16_t i, ui_Last_Cond, ui_Current_Cond;
 
 	//clear input used to determine variability
-	*Var_Value = 0;
 	*Cond_Value = 0;
 	*Light_Value = 0;
-	b_Is_Light = false;
 
 
 	//delay for 30s, get variability
 	for (i=0;i<Wait_Seconds;i++){
 		//delay 1sec
-			__delay_cycles(16000000);
-		//update last value 1s before the test begins
-			if(i==(NUM_VARIABILITY-2)){
-				ui_Last_Cond = Analog_Read(INPUT_CONDUCTIVITY, 100);
-			}
-		//only get variability after ~10s
-			if(i>(NUM_VARIABILITY-2)){
-			//get conductivity measurement
-				ui_Current_Cond = Analog_Read(INPUT_CONDUCTIVITY, 100);
-			//save maximum diff between readings
-				if(ui_Current_Cond > ui_Last_Cond){
-					if(*Var_Value<(ui_Current_Cond-ui_Last_Cond)){
-						*Var_Value += (ui_Current_Cond-ui_Last_Cond);
-					}
-				}
-				else{
-					if(*Var_Value < (ui_Last_Cond-ui_Current_Cond)){
-						*Var_Value += (ui_Last_Cond-ui_Current_Cond);
-					}
-				}
-			}
-		}
-
-	//test for volatility
-		if(*Var_Value > VOLATILE_THRESHOLD){
-			b_Is_Volatile = true;
-		}
+		__delay_cycles(16000000);
+	}
 
 	//determine conductivity
 		//read analog vals
 			for(i=0;i<NUM_COND_TEST;i++){
 				*Cond_Value += Analog_Read(INPUT_CONDUCTIVITY, 100);
 			}
-
+		//get average value
 			*Cond_Value /= NUM_COND_TEST;
 
-	//determine light dark
+	//determine light
 		//read analog vals
 			for(i=0;i<NUM_LIGHT_TEST;i++){
 				*Light_Value += Analog_Read(INPUT_LIGHT, 100);
@@ -139,38 +109,67 @@ uint8_t Get_Result(uint16_t *Cond_Value,
 
 			*Light_Value /= NUM_LIGHT_TEST;
 
-		//set bool based on avg value and threshold
-			if(*Light_Value > LIGHT_THRESHOLD){
-				b_Is_Light = true;
-			}
-
 	//perform logic
-		//use determined values to get liquid type
-		if((b_Is_Light==false) && (b_Is_Volatile) && (*Cond_Value > 450)){
-			return LT_COKE;
-		}
-		else if(*Cond_Value < 500){
-			if(b_Is_Light){
+		/*_____Type___________Cond Band___________Light Band____
+		|	Dist. Water			3-40				600-1023	|
+		|	White Vinegar		426-550				600-1023	|
+		|	Apple Juice			146-330				600-1023	|
+		|	Sugar Water			41-145				600-1023	|
+		|	Salt Water			331-425				600-1023	|
+		|	Coke				0-243				336-599	  	|
+		|	Orange Juice		244-1023			336-599  	|
+		|	Malt Vinegar		0-1023				0-335   	|
+		|	Mineral Oil			0-2					0-1022  	|
+		|	Vegetable Oil		0-2					1023   	 	|
+		|_______________________________________________________|
+		*/
+
+	//just go through each one explicitly (could split into bands etc)
+			//(1) Distilled water
+			if((*Cond_Value > 2 && *Cond_Value < 41) && (*Light_Value > 599)){
+				return LT_DISTILLED_WATER;
+			}
+			//(2) White Vinegar
+			else if((*Cond_Value > 425 && *Cond_Value < 551) && (*Light_Value > 599)){
 				return LT_WHITE_VINEGAR;
 			}
-			else{
-				return LT_MALT_VINEGAR;
+			//(3) Apple Juice
+			else if((*Cond_Value > 145 && *Cond_Value < 331) && (*Light_Value > 599)){
+				return LT_APPLE_JUICE;
 			}
-		}
-		else if(*Cond_Value < 780){
-			if(b_Is_Light){
+			//(4) Sugar Water
+			else if((*Cond_Value > 40 && *Cond_Value < 146) && (*Light_Value > 599)){
 				return LT_SUGAR_WATER;
 			}
-			else{
+			//(5) Salt Water
+			else if((*Cond_Value > 330 && *Cond_Value < 426) && (*Light_Value > 599)){
+				return LT_SALT_WATER;
+			}
+			//(6) Coke
+			else if((*Cond_Value < 244) && (*Light_Value > 335 && *Light_Value < 600)){
+				return LT_COKE;
+			}
+			//(7) Orange Juice
+			else if((*Cond_Value > 243) && (*Light_Value > 335 && *Light_Value < 600)){
 				return LT_ORANGE_JUICE;
 			}
-		}
-		else if(*Cond_Value < 994){
-			return LT_DISTILLED_WATER;
-		}
-		else {
-			return LT_VEGETABLE_OIL;
-		}
+			//(8) Malt Vinegar
+			else if(*Light_Value < 336){
+				return LT_MALT_VINEGAR;
+			}
+			//(9) Mineral Oil
+			else if((*Cond_Value < 3) && (*Light_Value < 1023)){
+				return LT_MINERAL_OIL;
+			}
+			//(10) Vegetable Oil
+			else if((*Cond_Value < 3) && (*Light_Value == 1023)){
+				return LT_MINERAL_OIL;
+			}
+			else{
+				//should never happen (random 10% chance)
+				return LT_MINERAL_OIL;
+			}
+
 }
 
 //Analog_Read performs much like the "Arduino" version with a 10-bit digital 
