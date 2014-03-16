@@ -528,7 +528,7 @@ void Update_XY_Coords(uint32_t Steps,
 //It then extracts the liquid then goes home
 void Cup_Found(void){
 	//declare local vars used to get sensing info
-	uint16_t Cond_Value, Light_Value, Var_Value;
+	uint16_t Cond_Value, Light_Value;
 	uint8_t Liquid_Type = 0;
 
 	//updates flags and coords
@@ -565,13 +565,18 @@ void Cup_Found(void){
 	//after adjustment we can just go home
 	Go_Home();
 
-	//print to computer
-	for(;;){
-		//get result from sensing unit
-		Liquid_Type = Get_Result(&Cond_Value, &Light_Value, &Var_Value,10);
-		__delay_cycles(400000);
-		Output_Result(&Liquid_Type,&Cond_Value,&Light_Value,&Var_Value);
+	//wait until unit is turned on
+	Liquid_Type = LT_NO_LIQUID;
+	while(Liquid_Type == LT_NO_LIQUID){
+		Liquid_Type = Get_Result(&Cond_Value, &Light_Value,1);
+		//let know working
+		Print_String("Wait...\r\n");
 	}
+
+	//get result from sensing unit
+	Liquid_Type = Get_Result(&Cond_Value, &Light_Value,40);
+	__delay_cycles(400000);
+	Output_Result(&Liquid_Type,&Cond_Value,&Light_Value);
 }
 
 //**********************************************************************************************************||

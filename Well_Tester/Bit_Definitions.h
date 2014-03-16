@@ -97,6 +97,7 @@
 #define LT_SUGAR_WATER				(0x8)
 #define LT_SALT_WATER				(0x9)
 #define LT_DISTILLED_WATER			(0xA)
+#define LT_NO_LIQUID				(0xB)
 
 
 

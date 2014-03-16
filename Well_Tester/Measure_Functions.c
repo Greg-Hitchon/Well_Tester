@@ -80,7 +80,7 @@ bool gub_Counter_Running = false, gub_Pulse_Start = false;
 uint8_t Get_Result(uint16_t *Cond_Value,
 					uint16_t *Light_Value,
 					uint16_t Wait_Seconds){
-
+	uint16_t i;
 
 	//clear input used to determine variability
 	*Cond_Value = 0;
@@ -89,8 +89,8 @@ uint8_t Get_Result(uint16_t *Cond_Value,
 
 	//delay for 30s, get variability
 	for (i=0;i<Wait_Seconds;i++){
-		//delay 1sec
-		__delay_cycles(16000000);
+		//delay 0.25sec
+		__delay_cycles(4000000);
 	}
 
 	//determine conductivity
@@ -125,51 +125,54 @@ uint8_t Get_Result(uint16_t *Cond_Value,
 		*/
 
 	//just go through each one explicitly (could split into bands etc)
-			//(1) Distilled water
-			if((*Cond_Value > 2 && *Cond_Value < 41) && (*Light_Value > 599)){
-				return LT_DISTILLED_WATER;
-			}
-			//(2) White Vinegar
-			else if((*Cond_Value > 425 && *Cond_Value < 551) && (*Light_Value > 599)){
-				return LT_WHITE_VINEGAR;
-			}
-			//(3) Apple Juice
-			else if((*Cond_Value > 145 && *Cond_Value < 331) && (*Light_Value > 599)){
-				return LT_APPLE_JUICE;
-			}
-			//(4) Sugar Water
-			else if((*Cond_Value > 40 && *Cond_Value < 146) && (*Light_Value > 599)){
-				return LT_SUGAR_WATER;
-			}
-			//(5) Salt Water
-			else if((*Cond_Value > 330 && *Cond_Value < 426) && (*Light_Value > 599)){
-				return LT_SALT_WATER;
-			}
-			//(6) Coke
-			else if((*Cond_Value < 244) && (*Light_Value > 335 && *Light_Value < 600)){
-				return LT_COKE;
-			}
-			//(7) Orange Juice
-			else if((*Cond_Value > 243) && (*Light_Value > 335 && *Light_Value < 600)){
-				return LT_ORANGE_JUICE;
-			}
-			//(8) Malt Vinegar
-			else if(*Light_Value < 336){
-				return LT_MALT_VINEGAR;
-			}
-			//(9) Mineral Oil
-			else if((*Cond_Value < 3) && (*Light_Value < 1023)){
-				return LT_MINERAL_OIL;
-			}
-			//(10) Vegetable Oil
-			else if((*Cond_Value < 3) && (*Light_Value == 1023)){
-				return LT_MINERAL_OIL;
-			}
-			else{
-				//should never happen (random 10% chance)
-				return LT_MINERAL_OIL;
-			}
-
+		//(0) No liquid
+		if(*Light_Value < 5){
+			return LT_NO_LIQUID;
+		}
+		//(1) Distilled water
+		else if((*Cond_Value > 2 && *Cond_Value < 41) && (*Light_Value > 599)){
+			return LT_DISTILLED_WATER;
+		}
+		//(2) White Vinegar
+		else if((*Cond_Value > 425 && *Cond_Value < 551) && (*Light_Value > 599)){
+			return LT_WHITE_VINEGAR;
+		}
+		//(3) Apple Juice
+		else if((*Cond_Value > 145 && *Cond_Value < 331) && (*Light_Value > 599)){
+			return LT_APPLE_JUICE;
+		}
+		//(4) Sugar Water
+		else if((*Cond_Value > 40 && *Cond_Value < 146) && (*Light_Value > 599)){
+			return LT_SUGAR_WATER;
+		}
+		//(5) Salt Water
+		else if((*Cond_Value > 330 && *Cond_Value < 426) && (*Light_Value > 599)){
+			return LT_SALT_WATER;
+		}
+		//(6) Coke
+		else if((*Cond_Value < 244) && (*Light_Value > 335 && *Light_Value < 600)){
+			return LT_COKE;
+		}
+		//(7) Orange Juice
+		else if((*Cond_Value > 243) && (*Light_Value > 335 && *Light_Value < 600)){
+			return LT_ORANGE_JUICE;
+		}
+		//(8) Malt Vinegar
+		else if(*Light_Value < 336){
+			return LT_MALT_VINEGAR;
+		}
+		//(9) Mineral Oil
+		else if((*Cond_Value < 3) && (*Light_Value < 1023)){
+			return LT_MINERAL_OIL;
+		}
+		//(10) Vegetable Oil
+		else if((*Cond_Value < 3) && (*Light_Value == 1023)){
+			return LT_MINERAL_OIL;
+		}
+		else{
+			//should never happen (random 10% chance)
+			return LT_MINERAL_OIL;
+		}
 }
 
 //Analog_Read performs much like the "Arduino" version with a 10-bit digital 
@@ -328,7 +331,6 @@ __interrupt void TIMER0_CCR0_ISR(void){
 	static uint16_t Time_Track[NUM_PULSE_AVG] = {0}, Last_Time = 0, Tmp_Time;
 	static uint8_t Time_Ind=0, Last_Ind;
 	static bool Pulse_Start = true, Test_Pulse = false, Valid_Edge = true;
-	uint16_t i=0;
 
 		//actualy do store/test
 		if(!Pulse_Start){
@@ -360,16 +362,6 @@ __interrupt void TIMER0_CCR0_ISR(void){
 				if(Test_Pulse){
 					//check if done
 					if(Time_Sum < CUP_FOUND_TICKS){
-						//temp
-						/*
-						for(i=0;i<NUM_PULSE_AVG; i++){
-							Print_UINT((Time_Track[i]));
-							Print_String("\r\n");
-						}
-						*/
-						//end temp
-
-
 						Shutdown_Pulses();
 						Shutdown_Counter();
 						Cup_Found();
