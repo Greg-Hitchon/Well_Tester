@@ -35,11 +35,11 @@ void Delay_For(uint32_t Wait_Cycles);
 //Compile time Constants
 //**********************************************************************************************************||
 //this is the number of steps to move forward after pumping before pumping air
-#define STEPS_ADJUST_AIR		(250)
+#define STEPS_ADJUST_AIR		(200)
 //this defines the number of steps to move forward to make sure the tube is out of the cup
-#define STEPS_NO_TIP_ADJUST		(200)
+#define STEPS_NO_TIP_ADJUST		(250)
 //moves this number of steps forward after the cup is found
-#define STEPS_ADJUST_FORWARD 	(50)
+#define STEPS_ADJUST_FORWARD 	(0)
 //this is the number of steps the robot moves backwards after cup is found
 #define STEPS_ADJUST_BACKWARD 	(250)
 //used in the delay loop
@@ -47,7 +47,7 @@ void Delay_For(uint32_t Wait_Cycles);
 //number of seconds to pump the liquid
 #define WET_PUMP_CYCLES			(5*16000000)
 //number of seconds to pump the air
-#define AIR_PUMP_CYCLES			(5*16000000)
+#define AIR_PUMP_CYCLES			(15*16000000)
 //number of seconds to wait before moving
 #define PAUSE_CYCLES			(5*16000000)
 

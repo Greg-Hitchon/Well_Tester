@@ -790,12 +790,12 @@ void Go_Home(void){
 	Re_Orient(WEST,DIME,1);
 
 	//do x translation
-	if(s_Track_Info.X_Steps > 0){
+	if(s_Track_Info.X_Steps > 0 || STEPS_TO_ADJUST_X_DOUBLE_CUP > 0){
 		if(s_Track_Info.X_Steps >STEPS_TO_ADJUST_X_DOUBLE_CUP){
 			Straight(FORWARD,s_Track_Info.X_Steps - STEPS_TO_ADJUST_X_DOUBLE_CUP,0);
 		}
 		else if(s_Track_Info.X_Steps < STEPS_TO_ADJUST_X_DOUBLE_CUP){
-			Straight(FORWARD,STEPS_TO_ADJUST_X_DOUBLE_CUP - s_Track_Info.X_Steps,0);
+			Straight(BACKWARD,STEPS_TO_ADJUST_X_DOUBLE_CUP - s_Track_Info.X_Steps,0);
 		}
 	}
 
