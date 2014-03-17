@@ -35,7 +35,7 @@ void Delay_For(uint32_t Wait_Cycles);
 //Compile time Constants
 //**********************************************************************************************************||
 //this is the number of steps to move forward after pumping before pumping air
-#define STEPS_ADJUST_AIR		(200)
+#define STEPS_ADJUST_AIR		(250)
 //this defines the number of steps to move forward to make sure the tube is out of the cup
 #define STEPS_NO_TIP_ADJUST		(250)
 //moves this number of steps forward after the cup is found

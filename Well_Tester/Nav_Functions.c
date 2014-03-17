@@ -575,8 +575,12 @@ void Cup_Found(void){
 
 	//get result from sensing unit
 	Liquid_Type = Get_Result(&Cond_Value, &Light_Value,40);
-	__delay_cycles(400000);
-	Output_Result(&Liquid_Type,&Cond_Value,&Light_Value);
+
+	//output the same result FOREVER
+	for(;;){
+		__delay_cycles(16000000);
+		Output_Result(&Liquid_Type,&Cond_Value,&Light_Value);
+	}
 }
 
 //**********************************************************************************************************||
