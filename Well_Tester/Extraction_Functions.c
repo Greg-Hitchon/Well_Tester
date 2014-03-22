@@ -44,11 +44,11 @@ void Delay_For(uint32_t Wait_Cycles);
 #define STEPS_ADJUST_BACKWARD 	(250)
 //used in the delay loop
 #define LOOP_DELAY				(100)
-//number of seconds to pump the liquid
+//number of seconds to pump the liquid //5
 #define WET_PUMP_CYCLES			(5*16000000)
-//number of seconds to pump the air
+//number of seconds to pump the air  //15
 #define AIR_PUMP_CYCLES			(15*16000000)
-//number of seconds to wait before moving
+//number of seconds to wait before moving //5
 #define PAUSE_CYCLES			(5*16000000)
 
 

@@ -52,12 +52,14 @@ void Shutdown_Counter(void);
 #define PULSE_DURATION_TICKS	(40)
 //this is the value that the running average has to be less than for the ultrasonic to trigger a cup found
 #define CUP_FOUND_TICKS			(25000)
-//this is the value that the running average has to be less than for the ultrasonic to trigger an edge detect
-#define EDGE_DETECT_TICKS		(45000)
+//this is the minimum threshold distance
+#define MIN_THRESHOLD_COUNTS	(5000UL)
 //when keeping track of overflows case may be you have one overflow plus a few ticks that could be missed.  this bumps that up in order to catch all interrupts
 #define MIN_LEFTOVER_TICKS		(30)
 //this is the number of pulse durations to keep in the running sum array
-#define NUM_PULSE_AVG			(10)
+#define NUM_PULSE_AVG			(10UL)
+//this is the value that the running average has to be less than for the ultrasonic to trigger an edge detect
+#define EDGE_DETECT_TICKS		(NUM_PULSE_AVG*MIN_THRESHOLD_COUNTS)
 
 //Sensing Unit Function
 #define NUM_LIGHT_TEST 			(10)
@@ -73,7 +75,7 @@ void Shutdown_Counter(void);
 uint32_t gul_ADC_Total;
 uint16_t gul_Tick_Count, gui_ADC_Count, gui_ADC_Target, gui_Overflows_Remaining, gui_Overflow_Count, gui_Num_Leftover;
 uint8_t gui_Channel, gui_Threshold_Type;
-bool gub_Counter_Running = false, gub_Pulse_Start = false;
+bool gub_Counter_Running = false, gub_Pulse_Start = false, Pulse_Start = true;
    
 
 //**********************************************************************************************************||
@@ -214,6 +216,9 @@ return UINT16_C(gul_ADC_Total/gui_ADC_Count);
 //***********************************************************************************************************************************************
 
 void Initialize_Pulses(uint8_t Ultrasonic_Mode){
+	//need to reset these (not best practice here as susceptible to false reading)
+	Pulse_Start = true;
+
 	//need to have timer running here
 	if(!gub_Counter_Running){
 		Initialize_Counter();
@@ -318,9 +323,9 @@ __interrupt void ADC_ISR(void){
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void TIMER0_CCR0_ISR(void){
 	static uint32_t Time_Sum = 0;
-	static uint16_t Time_Track[NUM_PULSE_AVG] = {0}, Last_Time = 0, Tmp_Time;
+	static uint16_t Time_Track[NUM_PULSE_AVG] = {0}, Last_Time = 0, Tmp_Time, i;
 	static uint8_t Time_Ind=0, Last_Ind;
-	static bool Pulse_Start = true, Test_Pulse = false, Valid_Edge = true;
+	static bool Test_Pulse = false, Valid_Edge = true;
 
 		//actualy do store/test
 		if(!Pulse_Start){
@@ -360,10 +365,10 @@ __interrupt void TIMER0_CCR0_ISR(void){
 					}
 					else if(gui_Threshold_Type == UM_EDGE_DETECT){
 						//check if done
-						if(Time_Sum > EDGE_DETECT_TICKS){
+						if(Time_Track[Last_Ind]  > MIN_THRESHOLD_COUNTS){
 							Shutdown_Pulses();
 							Shutdown_Counter();
-							for(;;){}
+							Clear_State(BOTH_MOTORS);
 						}
 					}
 				}
@@ -377,6 +382,15 @@ __interrupt void TIMER0_CCR0_ISR(void){
 			Last_Time = Tmp_Time;
 		}
 		else{
+			//setup locally stored vars
+			Time_Sum = 0;
+			Time_Ind=0;
+			Test_Pulse = false;
+			Valid_Edge = true;
+
+			for(i=0;i<NUM_PULSE_AVG;i++){
+				Time_Track[i]=0;
+			}
 			//toggle flag
 			Pulse_Start = false;
 			//update the starting time

@@ -73,26 +73,27 @@ void Disable_Motors(void);
 //this is the number of steps used to make sure we dont run into the wall in the go_home algo
 #define STEPS_Y_ADJUST			(150)
 //delay between movement in the movement algos
-#define DELAY_BETWEEN 			(1500000)
+#define DELAY_BETWEEN 			(4000000)
 
 
 //secondary (calculated) values
-#define ADJ_CLOCK_FREQ			((UINT32_C(CLOCK_FREQ))*UINT32_C(12500))
+#define ADJ_CLOCK_FREQ					((UINT32_C(CLOCK_FREQ))*UINT32_C(12500))
 //this should be equal to STEPS_PER_SWEEP/PI
-#define STEPS_XY_PER_SWEEP		(240)
+#define STEPS_XY_PER_SWEEP				(240)
 //this is the steps to backup from the wall running in order to be able to execute a dime turn
-#define STEPS_TO_BACK_UP_FIRST	(250)
-//this is the number of steps to backup to center the robot in the sensing area
-#define STEPS_TO_BACK_UP_SECOND	(300)
-//this controls the backing up to avoid the double cup problem
-#define STEPS_TO_BACKUP_DOUBLE_CUP (650)
+#define STEPS_TO_BACK_UP_FIRST			(300)
+//this is the steps to backup from the wall running in order to be able to execute a dime turn
+#define STEPS_TO_BACK_UP_SECOND			(300)
 //this makes it so the robot is reasonably far away from the west wall before the double cup adjustment
-#define STEPS_TO_ADJUST_X_DOUBLE_CUP (200)
-
+#define STEPS_TO_ADJUST_X_DOUBLE_CUP 	(400)
+//adjustment for the max error in the y direction for go home algorithm
+#define STEPS_Y_SAFETY 					(300)
+//adjustment for the max error in the x direction for go home algorithm
+#define STEPS_X_SAFETY					(300)
 //this is the number of steps to move forward when running into the wall to straighten up.  try to keep small as possible
-#define STEPS_TO_WALL_RUN		(550+STEPS_TO_ADJUST_X_DOUBLE_CUP)
-//this is the number of steps to move forward when running into the wall to straighten up.  try to keep small as possible
-#define STEPS_TO_WALL_RUN_2		(300)
+#define STEPS_TO_WALL_RUN				(STEPS_Y_SAFETY + 800)
+//x steps to go into sensing are
+#define STEPS_TO_WALL_RUN_2				(STEPS_X_SAFETY + 1000)
 
 //**********************************************************************************************************||
 //Other Constants
@@ -803,31 +804,57 @@ void Go_Home(void){
 		}
 	}
 
-	//This is to solve the double cup issue
-	Turn(RIGHT,1,DIME,STEPS_PER_DIME);
-	Straight(BACKWARD,STEPS_TO_BACKUP_DOUBLE_CUP,0);
-	Turn(LEFT,1,DIME,STEPS_PER_DIME);
-
-	//make adjustment for straightness
-	Straight(FORWARD,STEPS_TO_WALL_RUN,2);
-	//back up from wall
-	Straight(BACKWARD,STEPS_TO_BACK_UP_FIRST,2);
-
 	//turn to the y direction
 	Re_Orient(SOUTH,DIME,1);
 
 	//do y translation
 	if(s_Track_Info.Y_Steps > 0){
 		//do y translation
-		Straight(FORWARD, s_Track_Info.Y_Steps,0);
+		if(s_Track_Info.Y_Steps > STEPS_Y_SAFETY){
+			Straight(FORWARD, s_Track_Info.Y_Steps - STEPS_Y_SAFETY,0);
+		}
+		else if (s_Track_Info.Y_Steps < STEPS_Y_SAFETY){
+			Straight(FORWARD, STEPS_Y_SAFETY - s_Track_Info.Y_Steps,0);
+		}
 	}
+
+	//turn around
+	Re_Orient(NORTH,DIME,1);
+
+	//set up the pulses to detect the edge
+	Initialize_Pulses(UM_EDGE_DETECT);
 	//make adjustment for straighness
-	Straight(FORWARD,STEPS_TO_WALL_RUN_2,2);
-	//back up from wall
-	Straight(BACKWARD,STEPS_TO_BACK_UP_SECOND,2);
+	Straight(BACKWARD,STEPS_TO_WALL_RUN,2);
+	//little adjustment to make sure we are straight
+	//Straight(BACKWARD,25,2);
+	//move away from wall
+	Straight(FORWARD,STEPS_TO_BACK_UP_FIRST,2);
+
 
 	//adjust so cup is within box
+	Re_Orient(EAST,DIME,0);
+	//do x-translation
+	if(s_Track_Info.X_Steps > 0){
+		//do X translation
+		if(s_Track_Info.X_Steps > STEPS_X_SAFETY){
+			Straight(BACKWARD, s_Track_Info.X_Steps - STEPS_X_SAFETY,0);
+		}
+		else if (s_Track_Info.X_Steps < STEPS_X_SAFETY){
+			Straight(BACKWARD, STEPS_X_SAFETY - s_Track_Info.X_Steps,0);
+		}
+	}
+
+	//set up the pulses to detect the edge
+	Initialize_Pulses(UM_EDGE_DETECT);
+	//go backwards into sensing
+	Straight(BACKWARD,STEPS_TO_WALL_RUN_2,2);
+	//little adjustment to make sure we are straight
+	//Straight(BACKWARD,25,2);
+	Straight(FORWARD,STEPS_TO_BACK_UP_SECOND,2);
+
+	//turn such that liquid will be in area
 	Re_Orient(WEST,DIME,0);
+
 	//delay 0.5s to prevent robot from rolling
 	__delay_cycles(8000000);
 

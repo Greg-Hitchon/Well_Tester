@@ -59,9 +59,6 @@ void main(void) {
 	BCSCTL1 = CALBC1_16MHZ;
 	DCOCTL = CALDCO_16MHZ;
 
-	//settle time
-	__delay_cycles(32000000);
-
 	//***************************
 	//NAVIGATION ALGO HERE
 	//***************************
@@ -75,21 +72,28 @@ void main(void) {
 	//initialize startup bit configuration
 	Initialize_Bits();
 	//start the ultrasonic sensing
-	Initialize_Pulses(UM_EDGE_DETECT);
+	Initialize_Pulses(UM_CUP_FIND);
 	//initialize the tracking direction + distances
 	Initialize_Tracking();
 	//create all necessary profiles for navigation purposes
 	//main running profile
-	Create_Nav_Profile(0,4000,7500,5500,10,10,1,1);
+	Create_Nav_Profile(0,3500,7500,3500,10,10,1,1);
 	//turn profile
 	Create_Nav_Profile(1,3500,3500,3500,10,10,1,1);
 	//adjust profile
-	Create_Nav_Profile(2,3000,3000,3000,10,10,1,1);
+	Create_Nav_Profile(2,2500,2500,2500,10,10,1,1);
+	//settle time
+	__delay_cycles(32000000);
 	//execute algorithm
-	Straight(BACKWARD,100000,2);
-	//Final_Run();
-	//____________________________
-  
+	Final_Run();
+/*
+  for(;;){
+	  Initialize_Pulses(UM_EDGE_DETECT);
+	  Straight(BACKWARD,1000,0);
+	  Straight(FORWARD,100,0);
+	  __delay_cycles(16000000);
+  }
+  */
 	//***************************
 	//Program end, enter infinite loop
 	//***************************

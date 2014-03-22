@@ -13,6 +13,7 @@
 void Set_Timer(void);
 void Initialize_Bits(void);
 void Initialize_Tracking(void);
+void Clear_State(uint8_t Motor_ID);
 void Cup_Found(void);
 void Go_Home(void);
 void Wait_For_Startup(void);
