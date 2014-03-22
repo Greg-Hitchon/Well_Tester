@@ -52,6 +52,8 @@ void Shutdown_Counter(void);
 #define PULSE_DURATION_TICKS	(40)
 //this is the value that the running average has to be less than for the ultrasonic to trigger a cup found
 #define CUP_FOUND_TICKS			(25000)
+//this is the value that the running average has to be less than for the ultrasonic to trigger an edge detect
+#define EDGE_DETECT_TICKS		(45000)
 //when keeping track of overflows case may be you have one overflow plus a few ticks that could be missed.  this bumps that up in order to catch all interrupts
 #define MIN_LEFTOVER_TICKS		(30)
 //this is the number of pulse durations to keep in the running sum array
@@ -70,7 +72,7 @@ void Shutdown_Counter(void);
 //**********************************************************************************************************||
 uint32_t gul_ADC_Total;
 uint16_t gul_Tick_Count, gui_ADC_Count, gui_ADC_Target, gui_Overflows_Remaining, gui_Overflow_Count, gui_Num_Leftover;
-uint8_t gui_Channel;
+uint8_t gui_Channel, gui_Threshold_Type;
 bool gub_Counter_Running = false, gub_Pulse_Start = false;
    
 
@@ -211,7 +213,7 @@ return UINT16_C(gul_ADC_Total/gui_ADC_Count);
 //This controls the pulse sending/receiving
 //***********************************************************************************************************************************************
 
-void Initialize_Pulses(void){
+void Initialize_Pulses(uint8_t Ultrasonic_Mode){
 	//need to have timer running here
 	if(!gub_Counter_Running){
 		Initialize_Counter();
@@ -220,6 +222,9 @@ void Initialize_Pulses(void){
 	//get number of overflows
 	gui_Overflow_Count = UINT16_C(PULSE_PERIOD_TICKS / 0x10000UL);
 	gui_Num_Leftover = UINT16_C(PULSE_PERIOD_TICKS % 0x10000UL);
+
+	//set the ultrasonic mode
+	gui_Threshold_Type = Ultrasonic_Mode;
 
 	//check and fill remaining overflows
 	if(gui_Num_Leftover < MIN_LEFTOVER_TICKS){
@@ -345,11 +350,21 @@ __interrupt void TIMER0_CCR0_ISR(void){
 
 				//here we update the sum
 				if(Test_Pulse){
-					//check if done
-					if(Time_Sum < CUP_FOUND_TICKS){
-						Shutdown_Pulses();
-						Shutdown_Counter();
-						Cup_Found();
+					if(gui_Threshold_Type == UM_CUP_FIND){
+						//check if done
+						if(Time_Sum < CUP_FOUND_TICKS){
+							Shutdown_Pulses();
+							Shutdown_Counter();
+							Cup_Found();
+						}
+					}
+					else if(gui_Threshold_Type == UM_EDGE_DETECT){
+						//check if done
+						if(Time_Sum > EDGE_DETECT_TICKS){
+							Shutdown_Pulses();
+							Shutdown_Counter();
+							for(;;){}
+						}
 					}
 				}
 			}

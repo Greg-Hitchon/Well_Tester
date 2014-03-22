@@ -17,7 +17,8 @@ uint8_t Get_Result(uint16_t *Cond_Value,
 					uint16_t *Light_Value,
 					uint16_t Wait_Seconds);
 void Reset_Count(void);
-void Initialize_Pulses(void);
+void Initialize_Counter(void);
+void Initialize_Pulses(uint8_t Ultrasonic_Mode);
 bool Get_Pulse_Status(void);
 bool Update_Pulse_Tracker(void);
                 

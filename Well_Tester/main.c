@@ -62,44 +62,11 @@ void main(void) {
 	//settle time
 	__delay_cycles(32000000);
 
-	//temp
-	/*
-	//turn off motors
-	  	uint16_t Cond_Value, Light_Value, Var_Value;
-	 	uint8_t Liquid_Type;
-		P2OUT = 0;
-		P2SEL = 0;
-		P2DIR = 0;
-		__enable_interrupt();
-
-		//print to computer
-		for(;;){
-			//get result from sensing unit
-			Liquid_Type = Get_Result(&Cond_Value, &Light_Value, &Var_Value,5);
-			__delay_cycles(4000000);
-			Output_Result(&Liquid_Type,&Cond_Value,&Light_Value,&Var_Value);
-		}
-	 */
-	//end temp
-
 	//***************************
 	//NAVIGATION ALGO HERE
 	//***************************
 	//make sure interrupts are enabled
 	__enable_interrupt();
-
-	//temp
-	/*
-	//make sure motors are off
-	Disable_Motors();
-	//start the ultrasonic sensing
-	//Initialize_Pulses();
-	P1DIR = BIT_PUMP;
-	P1OUT = BIT_PUMP;
-	for(;;){}
-	__bis_SR_register(CPUOFF + GIE);
-	*/
-	//end temp
 
 	//configure all of port 1 for output (does not do anything of note)
 	P1DIR |= 0xFF;
@@ -108,7 +75,7 @@ void main(void) {
 	//initialize startup bit configuration
 	Initialize_Bits();
 	//start the ultrasonic sensing
-	Initialize_Pulses();
+	Initialize_Pulses(UM_EDGE_DETECT);
 	//initialize the tracking direction + distances
 	Initialize_Tracking();
 	//create all necessary profiles for navigation purposes
@@ -119,7 +86,8 @@ void main(void) {
 	//adjust profile
 	Create_Nav_Profile(2,3000,3000,3000,10,10,1,1);
 	//execute algorithm
-	Final_Run();
+	Straight(BACKWARD,100000,2);
+	//Final_Run();
 	//____________________________
   
 	//***************************

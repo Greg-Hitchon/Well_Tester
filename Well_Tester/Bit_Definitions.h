@@ -86,6 +86,10 @@
 #define SOUTH						UINT8_C(128)
 #define WEST						UINT8_C(192)
 
+//these are just to discern between the cup find ultrasonic mode and the edge detect mode
+#define UM_CUP_FIND 				(0x1)
+#define UM_EDGE_DETECT				(0x2)
+
 //numeric constants for liquid types (LT's)
 #define LT_ORANGE_JUICE				(0x1)
 #define LT_APPLE_JUICE				(0x2)
