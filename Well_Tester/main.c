@@ -59,6 +59,9 @@ void main(void) {
 	BCSCTL1 = CALBC1_16MHZ;
 	DCOCTL = CALDCO_16MHZ;
 
+	//settle time
+	__delay_cycles(32000000);
+
 	//***************************
 	//NAVIGATION ALGO HERE
 	//***************************
@@ -82,8 +85,6 @@ void main(void) {
 	Create_Nav_Profile(1,3500,3500,3500,10,10,1,1);
 	//adjust profile
 	Create_Nav_Profile(2,2500,2500,2500,10,10,1,1);
-	//settle time
-	__delay_cycles(32000000);
 	//execute algorithm
 	Final_Run();
 /*

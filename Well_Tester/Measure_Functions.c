@@ -50,22 +50,26 @@ void Shutdown_Counter(void);
 #define PULSE_PERIOD_TICKS 		(200000UL)
 //this is the high time of the ticks, corresponds to 10us
 #define PULSE_DURATION_TICKS	(40)
-//this is the value that the running average has to be less than for the ultrasonic to trigger a cup found
-#define CUP_FOUND_TICKS			(25000)
-//this is the minimum threshold distance
-#define MIN_THRESHOLD_COUNTS	(5000UL)
 //when keeping track of overflows case may be you have one overflow plus a few ticks that could be missed.  this bumps that up in order to catch all interrupts
 #define MIN_LEFTOVER_TICKS		(30)
+
+//this is the minimum reading expected from table reading, less than this indicates a cup
+#define TICKS_TABLE_MIN			(2500UL)
+//this is the maximum reading expected from table reading, more than this indicates an edge
+#define TICKS_TABLE_MAX			(5000UL)
+
 //this is the number of pulse durations to keep in the running sum array
-#define NUM_PULSE_AVG			(10UL)
-//this is the value that the running average has to be less than for the ultrasonic to trigger an edge detect
-#define EDGE_DETECT_TICKS		(NUM_PULSE_AVG*MIN_THRESHOLD_COUNTS)
+#define NUM_PULSE_AVG_MAX		(10UL)
+//this is the length of the averaging for the cup find
+#define NUM_PULSE_AVG_CUP_FIND	(NUM_PULSE_AVG_MAX)
+
+//cup found threshold
+#define TICKS_CUP_FOUND 		(NUM_PULSE_AVG_CUP_FIND*TICKS_TABLE_MIN)
+#define CNT_EDGE_DETECT			(4)
 
 //Sensing Unit Function
 #define NUM_LIGHT_TEST 			(10)
 #define NUM_COND_TEST 			(10)
-#define NUM_VARIABILITY 		(10)
-
 
 //**********************************************************************************************************||
 //Variables
@@ -73,9 +77,9 @@ void Shutdown_Counter(void);
 //Mem: ~20 Bytes
 //**********************************************************************************************************||
 uint32_t gul_ADC_Total;
-uint16_t gul_Tick_Count, gui_ADC_Count, gui_ADC_Target, gui_Overflows_Remaining, gui_Overflow_Count, gui_Num_Leftover;
+uint16_t gul_Tick_Count, gui_ADC_Count, gui_ADC_Target, gui_Overflows_Remaining, gui_Overflow_Count, gui_Num_Leftover, gui_Pulse_Average_Length;
 uint8_t gui_Channel, gui_Threshold_Type;
-bool gub_Counter_Running = false, gub_Pulse_Start = false, Pulse_Start = true;
+bool gub_Counter_Running = false, gub_Pulse_Start = false, gub_Echo_Pulse_Start = true;
    
 
 //**********************************************************************************************************||
@@ -217,7 +221,7 @@ return UINT16_C(gul_ADC_Total/gui_ADC_Count);
 
 void Initialize_Pulses(uint8_t Ultrasonic_Mode){
 	//need to reset these (not best practice here as susceptible to false reading)
-	Pulse_Start = true;
+	gub_Echo_Pulse_Start = true;
 
 	//need to have timer running here
 	if(!gub_Counter_Running){
@@ -323,28 +327,32 @@ __interrupt void ADC_ISR(void){
 #pragma vector=TIMER0_A0_VECTOR
 __interrupt void TIMER0_CCR0_ISR(void){
 	static uint32_t Time_Sum = 0;
-	static uint16_t Time_Track[NUM_PULSE_AVG] = {0}, Last_Time = 0, Tmp_Time, i;
-	static uint8_t Time_Ind=0, Last_Ind;
-	static bool Test_Pulse = false, Valid_Edge = true;
+	static uint16_t Time_Track[NUM_PULSE_AVG_MAX] = {0}, Last_Time = 0, Threshold_Count = 0;
+	static uint8_t Time_Ind=0;
+	static bool Test_Pulse = false;
+	uint16_t Tmp_Time, i,Last_Ind, Tmp_Diff;
 
 		//actualy do store/test
-		if(!Pulse_Start){
-			//update the current value of the timer right away
+		if(!gub_Echo_Pulse_Start){
+			//get the current time
 			Tmp_Time = TA0CCR0;
+			//get the time difference
+			Tmp_Diff = Tmp_Time - Last_Time;
+			//set the last time = current time
+			Last_Time = Tmp_Time;
 
-			if(Valid_Edge){
-				//toggle flab
-				Valid_Edge = false;
-				//very first thing we do is subtract the current value of the track array from the sum
+			//check cup find
+			if((gui_Threshold_Type == UM_CUP_FIND) && (Tmp_Diff < TICKS_TABLE_MAX)){
+				//subtract the current value of the track array from the sum
 				Last_Ind = Time_Ind;
 				Time_Sum -= UINT32_C(Time_Track[Last_Ind]);
 
-				Time_Track[Last_Ind] = Tmp_Time - Last_Time;
+				//get time difference
+				Time_Track[Last_Ind] = Tmp_Diff;
 				Time_Sum += UINT32_C(Time_Track[Last_Ind]);
 
-
 				//get new index
-				if(++Time_Ind == NUM_PULSE_AVG){
+				if(++Time_Ind == NUM_PULSE_AVG_CUP_FIND){
 					//reset the index
 					Time_Ind = 0;
 					//make sure that we only do a sum if this code has executed at least once
@@ -353,46 +361,43 @@ __interrupt void TIMER0_CCR0_ISR(void){
 					}
 				}
 
-				//here we update the sum
-				if(Test_Pulse){
-					if(gui_Threshold_Type == UM_CUP_FIND){
-						//check if done
-						if(Time_Sum < CUP_FOUND_TICKS){
-							Shutdown_Pulses();
-							Shutdown_Counter();
-							Cup_Found();
-						}
-					}
-					else if(gui_Threshold_Type == UM_EDGE_DETECT){
-						//check if done
-						if(Time_Track[Last_Ind]  > MIN_THRESHOLD_COUNTS){
-							Shutdown_Pulses();
-							Shutdown_Counter();
-							Clear_State(BOTH_MOTORS);
-						}
-					}
+				//check if cup has been found
+				if(Test_Pulse && (Time_Sum < TICKS_CUP_FOUND)){
+					Shutdown_Pulses();
+					Shutdown_Counter();
+					Cup_Found();
 				}
 			}
-			else{
-				//toggle flag
-				Valid_Edge = true;
+			//check edge detect
+			else if(gui_Threshold_Type == UM_EDGE_DETECT){
+				//keep track of number of raw readings above the table max
+				if(Tmp_Diff > TICKS_TABLE_MAX){
+					Threshold_Count++;
+				}
+				else{
+					Threshold_Count = 0;
+				}
+				//check if edge is found
+				if(Threshold_Count >= CNT_EDGE_DETECT){
+					Shutdown_Pulses();
+					Shutdown_Counter();
+					Clear_State(BOTH_MOTORS);
+				}
 			}
 
-			//save the last time
-			Last_Time = Tmp_Time;
 		}
 		else{
 			//setup locally stored vars
 			Time_Sum = 0;
-			Time_Ind=0;
+			Time_Ind = 0;
+			Threshold_Count = 0;
 			Test_Pulse = false;
-			Valid_Edge = true;
-
-			for(i=0;i<NUM_PULSE_AVG;i++){
+			//clear array
+			for(i=0;i<NUM_PULSE_AVG_MAX;i++){
 				Time_Track[i]=0;
 			}
 			//toggle flag
-			Pulse_Start = false;
+			gub_Echo_Pulse_Start = false;
 			//update the starting time
 			Last_Time = TA0CCR0;
 		}
