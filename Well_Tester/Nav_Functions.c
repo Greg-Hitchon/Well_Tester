@@ -73,7 +73,7 @@ void Disable_Motors(void);
 //this is the number of steps used to make sure we dont run into the wall in the go_home algo
 #define STEPS_Y_ADJUST			(150)
 //delay between movement in the movement algos
-#define DELAY_BETWEEN 			(4000000)
+#define DELAY_BETWEEN 			(1500000)
 
 
 //secondary (calculated) values

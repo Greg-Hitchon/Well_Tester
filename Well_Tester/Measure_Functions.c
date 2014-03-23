@@ -57,6 +57,11 @@ void Shutdown_Counter(void);
 #define TICKS_TABLE_MIN			(2500UL)
 //this is the maximum reading expected from table reading, more than this indicates an edge
 #define TICKS_TABLE_MAX			(5000UL)
+//this is the minimum expected from a cup reading
+#define TICKS_CUP_MIN			(1500UL)
+//this is the maximum expected from a cup reading
+#define TICKS_CUP_MAX			(TICKS_TABLE_MIN-1)
+
 
 //this is the number of pulse durations to keep in the running sum array
 #define NUM_PULSE_AVG_MAX		(10UL)
@@ -65,7 +70,7 @@ void Shutdown_Counter(void);
 
 //cup found threshold
 #define TICKS_CUP_FOUND 		(NUM_PULSE_AVG_CUP_FIND*TICKS_TABLE_MIN)
-#define CNT_EDGE_DETECT			(4)
+#define CNT_EDGE_DETECT			(2)
 
 //Sensing Unit Function
 #define NUM_LIGHT_TEST 			(10)
@@ -342,7 +347,7 @@ __interrupt void TIMER0_CCR0_ISR(void){
 			Last_Time = Tmp_Time;
 
 			//check cup find
-			if((gui_Threshold_Type == UM_CUP_FIND) && (Tmp_Diff < TICKS_TABLE_MAX)){
+			if((gui_Threshold_Type == UM_CUP_FIND) && (Tmp_Diff < TICKS_TABLE_MAX) && (Tmp_Diff > TICKS_CUP_MIN)){
 				//subtract the current value of the track array from the sum
 				Last_Ind = Time_Ind;
 				Time_Sum -= UINT32_C(Time_Track[Last_Ind]);
