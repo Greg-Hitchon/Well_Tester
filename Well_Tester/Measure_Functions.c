@@ -56,7 +56,7 @@ void Shutdown_Counter(void);
 //this is the minimum reading expected from table reading, less than this indicates a cup
 #define TICKS_TABLE_MIN			(2500UL)
 //this is the maximum reading expected from table reading, more than this indicates an edge
-#define TICKS_TABLE_MAX			(5000UL)
+#define TICKS_TABLE_MAX			(3800UL)
 //this is the minimum expected from a cup reading
 #define TICKS_CUP_MIN			(1500UL)
 //this is the maximum expected from a cup reading
