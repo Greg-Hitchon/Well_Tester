@@ -379,7 +379,7 @@ __interrupt void TIMER0_CCR0_ISR(void){
 				if(Tmp_Diff > TICKS_TABLE_MAX){
 					Threshold_Count++;
 				}
-				else{
+				else if(Tmp_Diff > TICKS_CUP_MIN){
 					Threshold_Count = 0;
 				}
 				//check if edge is found
